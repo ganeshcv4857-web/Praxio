@@ -1,0 +1,412 @@
+{
+ "legacy_cse_undergrad": {
+  "profile": {
+   "branch": "cse",
+   "year_of_study": 3,
+   "interests": {
+    "int_software": 5,
+    "int_data_ai": 4,
+    "int_electronics": 2,
+    "int_mechanical": 1,
+    "int_infrastructure": 1,
+    "int_design": 3,
+    "int_business": 2,
+    "int_people": 4,
+    "int_research": 3,
+    "int_security": 3,
+    "int_bio": 1,
+    "int_sustainability": 2,
+    "int_finance": 2
+   },
+   "aptitude": {
+    "apt_logical": 4,
+    "apt_quant": 4,
+    "apt_verbal": 3,
+    "apt_spatial": 3,
+    "apt_programming": 5
+   },
+   "aptitude_quiz": {
+    "apt_logical": 100,
+    "apt_quant": 50,
+    "apt_verbal": 100,
+    "apt_spatial": 50
+   },
+   "preferences": {
+    "pref_team": 50,
+    "pref_research": 50,
+    "pref_stability": 50,
+    "pref_hands_on": 50,
+    "pref_coding": 50,
+    "pref_study": 50
+   },
+   "traits": {
+    "tr_curiosity": 5,
+    "tr_detail": 4,
+    "tr_sociability": 3,
+    "tr_persistence": 4,
+    "tr_creativity": 4,
+    "tr_risk": 3
+   }
+  },
+  "ranked": [
+   {
+    "domainId": "cloud-devops",
+    "score": 81.7,
+    "coverage": 1
+   },
+   {
+    "domainId": "software-eng",
+    "score": 81,
+    "coverage": 1
+   },
+   {
+    "domainId": "ai-ml",
+    "score": 77.5,
+    "coverage": 1
+   },
+   {
+    "domainId": "cybersecurity",
+    "score": 77.3,
+    "coverage": 1
+   },
+   {
+    "domainId": "data-science",
+    "score": 74.6,
+    "coverage": 1
+   },
+   {
+    "domainId": "embedded-iot",
+    "score": 69.6,
+    "coverage": 1
+   },
+   {
+    "domainId": "research-academia",
+    "score": 62.5,
+    "coverage": 1
+   },
+   {
+    "domainId": "quant-finance",
+    "score": 59.2,
+    "coverage": 1
+   },
+   {
+    "domainId": "product-management",
+    "score": 59,
+    "coverage": 1
+   },
+   {
+    "domainId": "robotics",
+    "score": 58.7,
+    "coverage": 1
+   },
+   {
+    "domainId": "ux-design",
+    "score": 58.4,
+    "coverage": 1
+   },
+   {
+    "domainId": "vlsi",
+    "score": 55,
+    "coverage": 1
+   },
+   {
+    "domainId": "consulting-analyst",
+    "score": 54.9,
+    "coverage": 1
+   },
+   {
+    "domainId": "entrepreneurship",
+    "score": 54.7,
+    "coverage": 1
+   },
+   {
+    "domainId": "biomedical",
+    "score": 39.7,
+    "coverage": 1
+   },
+   {
+    "domainId": "energy-sustainability",
+    "score": 39.2,
+    "coverage": 1
+   },
+   {
+    "domainId": "core-mech",
+    "score": 37.8,
+    "coverage": 1
+   },
+   {
+    "domainId": "civil-infra",
+    "score": 37.6,
+    "coverage": 1
+   }
+  ]
+ },
+ "legacy_school10_no_prefs": {
+  "profile": {
+   "current_stage": "school_10",
+   "interests": {
+    "int_software": 2,
+    "int_data_ai": 2,
+    "int_electronics": 4,
+    "int_mechanical": 5,
+    "int_infrastructure": 4,
+    "int_design": 2,
+    "int_business": 1,
+    "int_people": 3,
+    "int_research": 2,
+    "int_security": 1,
+    "int_bio": 2,
+    "int_sustainability": 4,
+    "int_finance": 1
+   },
+   "aptitude": {
+    "apt_logical": 3,
+    "apt_quant": 4,
+    "apt_verbal": 2,
+    "apt_spatial": 5,
+    "apt_programming": 1
+   },
+   "aptitude_quiz": {},
+   "preferences": {},
+   "traits": {
+    "tr_curiosity": 4,
+    "tr_detail": 3,
+    "tr_sociability": 2,
+    "tr_persistence": 5,
+    "tr_creativity": 3,
+    "tr_risk": 2
+   }
+  },
+  "ranked": [
+   {
+    "domainId": "core-mech",
+    "score": 88.2,
+    "coverage": 0.63
+   },
+   {
+    "domainId": "civil-infra",
+    "score": 76.4,
+    "coverage": 0.63
+   },
+   {
+    "domainId": "energy-sustainability",
+    "score": 72.2,
+    "coverage": 0.78
+   },
+   {
+    "domainId": "vlsi",
+    "score": 68.2,
+    "coverage": 0.79
+   },
+   {
+    "domainId": "robotics",
+    "score": 65.1,
+    "coverage": 0.77
+   },
+   {
+    "domainId": "research-academia",
+    "score": 54.2,
+    "coverage": 0.64
+   },
+   {
+    "domainId": "embedded-iot",
+    "score": 44.4,
+    "coverage": 0.72
+   },
+   {
+    "domainId": "ai-ml",
+    "score": 43.5,
+    "coverage": 0.82
+   },
+   {
+    "domainId": "ux-design",
+    "score": 43.4,
+    "coverage": 0.9
+   },
+   {
+    "domainId": "cloud-devops",
+    "score": 41.3,
+    "coverage": 0.77
+   },
+   {
+    "domainId": "data-science",
+    "score": 41,
+    "coverage": 0.96
+   },
+   {
+    "domainId": "biomedical",
+    "score": 40.2,
+    "coverage": 0.78
+   },
+   {
+    "domainId": "cybersecurity",
+    "score": 35.9,
+    "coverage": 0.96
+   },
+   {
+    "domainId": "entrepreneurship",
+    "score": 35.2,
+    "coverage": 0.81
+   },
+   {
+    "domainId": "quant-finance",
+    "score": 32.6,
+    "coverage": 0.96
+   },
+   {
+    "domainId": "software-eng",
+    "score": 30.5,
+    "coverage": 0.62
+   },
+   {
+    "domainId": "consulting-analyst",
+    "score": 26.3,
+    "coverage": 0.83
+   },
+   {
+    "domainId": "product-management",
+    "score": 25.2,
+    "coverage": 0.84
+   }
+  ]
+ },
+ "legacy_professional_mixed": {
+  "profile": {
+   "current_stage": "employed_professional",
+   "branch": "mech",
+   "interests": {
+    "int_software": 3,
+    "int_data_ai": 3,
+    "int_electronics": 1,
+    "int_mechanical": 4,
+    "int_infrastructure": 2,
+    "int_design": 4,
+    "int_business": 5,
+    "int_people": 5,
+    "int_research": 1,
+    "int_security": 1,
+    "int_bio": 1,
+    "int_sustainability": 3,
+    "int_finance": 4
+   },
+   "aptitude": {
+    "apt_logical": 4,
+    "apt_quant": 3,
+    "apt_verbal": 5,
+    "apt_spatial": 3,
+    "apt_programming": 2
+   },
+   "aptitude_quiz": {
+    "apt_verbal": 100
+   },
+   "preferences": {
+    "pref_team": 85,
+    "pref_research": 20,
+    "pref_stability": 35,
+    "pref_hands_on": 40,
+    "pref_coding": 10,
+    "pref_study": 50
+   },
+   "traits": {
+    "tr_curiosity": 3,
+    "tr_detail": 3,
+    "tr_sociability": 5,
+    "tr_persistence": 3,
+    "tr_creativity": 4,
+    "tr_risk": 4
+   }
+  },
+  "ranked": [
+   {
+    "domainId": "consulting-analyst",
+    "score": 88.2,
+    "coverage": 1
+   },
+   {
+    "domainId": "product-management",
+    "score": 86.6,
+    "coverage": 1
+   },
+   {
+    "domainId": "entrepreneurship",
+    "score": 78.7,
+    "coverage": 1
+   },
+   {
+    "domainId": "ux-design",
+    "score": 74.7,
+    "coverage": 1
+   },
+   {
+    "domainId": "core-mech",
+    "score": 64.6,
+    "coverage": 1
+   },
+   {
+    "domainId": "quant-finance",
+    "score": 59.9,
+    "coverage": 1
+   },
+   {
+    "domainId": "data-science",
+    "score": 58.1,
+    "coverage": 1
+   },
+   {
+    "domainId": "cloud-devops",
+    "score": 52,
+    "coverage": 1
+   },
+   {
+    "domainId": "robotics",
+    "score": 49.5,
+    "coverage": 1
+   },
+   {
+    "domainId": "energy-sustainability",
+    "score": 49,
+    "coverage": 1
+   },
+   {
+    "domainId": "software-eng",
+    "score": 42.6,
+    "coverage": 1
+   },
+   {
+    "domainId": "embedded-iot",
+    "score": 41.4,
+    "coverage": 1
+   },
+   {
+    "domainId": "vlsi",
+    "score": 38.3,
+    "coverage": 1
+   },
+   {
+    "domainId": "civil-infra",
+    "score": 37.7,
+    "coverage": 1
+   },
+   {
+    "domainId": "ai-ml",
+    "score": 36.3,
+    "coverage": 1
+   },
+   {
+    "domainId": "cybersecurity",
+    "score": 35.7,
+    "coverage": 1
+   },
+   {
+    "domainId": "research-academia",
+    "score": 35.7,
+    "coverage": 1
+   },
+   {
+    "domainId": "biomedical",
+    "score": 32.4,
+    "coverage": 1
+   }
+  ]
+ }
+}
