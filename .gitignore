@@ -8,3 +8,4 @@ dist/
 !.env.example
 *.timestamp-*.mjs
 praxio_setup.sql
+app/supabase/.temp/
