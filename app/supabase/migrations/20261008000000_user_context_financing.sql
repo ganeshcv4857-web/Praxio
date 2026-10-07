@@ -14,7 +14,7 @@ alter table public.profiles
     'explore_careers', 'choose_stream', 'choose_degree', 'choose_career', 'build_skills', 'internship',
     'placement', 'find_job', 'higher_studies', 'career_switch', 'upskill')),
   add column if not exists school_stream text check (school_stream in ('pcm', 'pcb', 'pcmb', 'commerce', 'humanities', 'undecided')),
-  add column if not exists current_role text check (char_length(current_role) <= 120);
+  add column if not exists "current_role" text check (char_length("current_role") <= 120);
 
 -- Who pays, and whether scholarships are part of the plan (loan willingness already exists).
 alter table public.feasibility_assessments
