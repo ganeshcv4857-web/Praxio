@@ -62,6 +62,11 @@ export const GOAL_PROMOTES = Object.freeze({
 // Actions that need demonstrated capability first (readiness gate).
 export const READINESS_GATED = ['apply_jobs', 'pursue_internship'];
 
+// Academic entry-route eligibility matters when choosing a degree is the next decision:
+// school stages, or anyone whose goal is to choose a degree. Elsewhere it is 'not_applicable'.
+export const ACADEMIC_RELEVANT_STAGES = ['school_10', 'school_11', 'school_12'];
+export const ACADEMIC_RELEVANT_GOALS = ['choose_degree'];
+
 export const ACTION_LABELS = Object.freeze({
   complete_assessment: 'Complete the career assessment',
   confirm_stage: 'Confirm where you are right now',
@@ -84,4 +89,7 @@ export const ACTION_LABELS = Object.freeze({
   resolve_financing: 'Resolve how the path is financed',
   resolve_family_action: 'Agree a required step with your family',
   refresh_market: 'Check current market research',
+  add_academic_record: 'Add your marks',
+  take_subject: 'Take a subject that keeps a route open',
+  compare_routes: 'Compare entry routes into this career',
 });

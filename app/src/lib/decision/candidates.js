@@ -232,3 +232,86 @@ export function keepOpenCandidates(reason, open, ctx) {
   const steps = open.map((c) => (c.skills.nextSkill ? `${nameOf(c.careerId)}: try ${c.skills.nextSkill.course} and its first project` : `${nameOf(c.careerId)}: try one beginner project`));
   return [action('trial_project', { tier: 'stage', title: `Try a small project in ${listOf(names)}`, steps, reasons: [{ text: 'Your top careers are too close to separate; a project in each produces real evidence', basis: 'Module 1 Career Fit + Module 3 projects' }] })];
 }
+
+// ------------------------------------------------------------------ academic eligibility (consumed, never computed here)
+const QUAL_LABEL = { class_10: 'Class 10', class_12: 'Class 12' };
+
+/**
+ * Academic dependency actions for the careers in focus (the direction, or the open set).
+ * Input is bundle.academic: summarised results from the academic eligibility engine.
+ * Every action requires a concrete dependency in those results; unknown stays unknown and is
+ * never treated as failure.
+ *   add_academic_record  a route needs a record that is missing (pending school_12 → 'later';
+ *                        achieved-mode requirement blocked on a missing record → 'evidence')
+ *   take_subject         prospective route needs a subject the planned stream lacks, and no
+ *                        route into that career is open → 'dependency'
+ *   compare_routes       the career's first route is closed/uncertain while another is viable
+ */
+export function academicCandidates(academic, focus) {
+  if (academic?.status !== 'evaluated' || !focus.length) return [];
+  const byId = Object.fromEntries(academic.careers.map((a) => [a.careerId, a]));
+  const inFocus = focus.map((c) => byId[c.careerId]).filter(Boolean);
+  const out = [];
+
+  // 1. Missing academic records.
+  const records = new Map();
+  for (const q of academic.pendingRecords) records.set(q, 'later');
+  for (const a of inFocus) {
+    for (const r of a.routes) for (const m of r.remedies) if (m.type === 'add_record' && m.qualification) records.set(m.qualification, 'evidence');
+  }
+  for (const [q, tier] of [...records].sort(([a], [b]) => a.localeCompare(b))) {
+    const label = QUAL_LABEL[q] ?? q;
+    out.push(action('add_academic_record', {
+      tier, qualification: q, title: `Add your ${label} marks`,
+      steps: [`Enter or upload your ${label} subjects and marks`],
+      reasons: [{ text: tier === 'evidence' ? `Entry-route requirements cannot be checked without your ${label} record` : `Your ${label} marks will show which entry routes are open`, basis: 'Academic eligibility' }],
+    }));
+  }
+
+  // 2. Subjects needed to keep a route open (prospective only, and only if nothing is open).
+  const subjects = new Map();
+  for (const a of inFocus) {
+    if (a.mode !== 'prospective' || a.status === 'open') continue;
+    for (const r of a.routes.filter((x) => x.status === 'needs_subject')) {
+      for (const m of r.remedies.filter((x) => x.type === 'take_subject' && x.subject)) {
+        const e = subjects.get(m.subject) ?? { label: m.label ?? m.subject, careers: [], routes: [] };
+        if (!e.careers.includes(a.careerId)) e.careers.push(a.careerId);
+        if (!e.routes.includes(r.label)) e.routes.push(r.label);
+        subjects.set(m.subject, e);
+      }
+    }
+  }
+  for (const [subject, e] of [...subjects].sort(([a], [b]) => a.localeCompare(b))) {
+    out.push(action('take_subject', {
+      tier: 'dependency', subject, careerId: e.careers.length === 1 ? e.careers[0] : null,
+      title: `Take ${e.label} in Class 11–12`,
+      steps: [`Keeps ${listOf(e.routes)} open for ${listOf(e.careers.map(nameOf))}`],
+      reasons: [{ text: `${listOf(e.routes)} needs ${e.label}, which your planned stream does not include`, basis: 'Academic eligibility (prospective)' }],
+    }));
+  }
+
+  // 3. Another entry route when the first one is closed or uncertain.
+  for (const a of inFocus) {
+    if (a.routes.length < 2) continue;
+    const [primary, ...alts] = a.routes;
+    let tier = null;
+    let viable = [];
+    if (a.mode === 'achieved' && primary.status === 'not_eligible') {
+      viable = alts.filter((r) => r.status !== 'not_eligible');
+      tier = viable.length ? 'dependency' : null;
+    } else if (a.mode === 'achieved' && primary.status === 'unknown') {
+      viable = alts.filter((r) => r.status === 'eligible');
+      tier = viable.length ? 'later' : null;
+    } else if (a.mode === 'prospective' && primary.status === 'needs_subject') {
+      viable = alts.filter((r) => r.status === 'open');
+      tier = viable.length ? 'later' : null;
+    }
+    if (!tier) continue;
+    out.push(action('compare_routes', {
+      tier, careerId: a.careerId, title: `Compare entry routes into ${nameOf(a.careerId)}`,
+      steps: viable.map((r) => `${r.label}: ${r.status.replace('_', ' ')}`),
+      reasons: [{ text: `${primary.label} is ${primary.status.replace('_', ' ')}; the career is not ruled out`, basis: 'Academic eligibility (entry routes)' }],
+    }));
+  }
+  return out;
+}

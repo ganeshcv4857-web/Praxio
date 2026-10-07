@@ -288,11 +288,17 @@ export function evaluateProspectiveRoute(route, stream, catalog = DEFAULT_CATALO
 }
 
 // ---------------------------------------------------------------- careers
+/** Qualifications a school_12 student is expected to have but has not recorded yet. */
+export function pendingQualifications(profile, academicRecords) {
+  const stage = userContext(profile).stage;
+  return stage === 'school_12' && !asList(academicRecords).some((r) => r?.qualification === 'class_12') ? ['class_12'] : [];
+}
+
 /** 'prospective' for school_10/11, and school_12 without a Class 12 record; else 'achieved'. */
 export function eligibilityMode(profile, academicRecords) {
   const stage = userContext(profile).stage;
   if (PROSPECTIVE_STAGES.includes(stage)) return 'prospective';
-  if (stage === 'school_12' && !asList(academicRecords).some((r) => r?.qualification === 'class_12')) return 'prospective';
+  if (pendingQualifications(profile, academicRecords).length) return 'prospective';
   return 'achieved';
 }
 
@@ -337,5 +343,34 @@ export function evaluateCareerEligibility({ careerId, academicRecords = [], prof
     routes,
     viableRoutes: routes.filter((r) => r.status !== 'not_eligible').map((r) => r.routeId),
     evidenceLevel: weakestEvidence(routes.map((r) => r.evidenceLevel)),
+  };
+}
+
+// ---------------------------------------------------------------- decision boundary
+const REMEDY_KEYS = ['type', 'qualification', 'subject', 'label', 'routes'];
+
+/**
+ * The minimum the Decision Engine needs from a career result: statuses, reasons, remedy types
+ * and evidence levels. Marks, percentages, subject lists and record ids are left out, so they
+ * cannot reach decision text or AI prompts.
+ */
+export function summariseForDecision(result) {
+  return {
+    careerId: result.careerId,
+    mode: result.mode,
+    status: result.status,
+    viableRoutes: [...result.viableRoutes],
+    evidenceLevel: result.evidenceLevel,
+    routes: result.routes.map((r) => ({
+      routeId: r.routeId,
+      label: r.label,
+      status: r.status,
+      blocking: [...r.blocking],
+      unknown: [...r.unknown],
+      evidenceLevel: r.evidenceLevel,
+      officiallyVerified: r.officiallyVerified,
+      requirements: r.requirements.map((q) => ({ id: q.id, status: q.status, reason: q.reason, ...(q.indicative ? { indicative: q.indicative } : {}) })),
+      remedies: r.remedies.map((m) => Object.fromEntries(REMEDY_KEYS.filter((k) => k in m).map((k) => [k, Array.isArray(m[k]) ? [...m[k]] : m[k]]))),
+    })),
   };
 }

@@ -15,7 +15,7 @@ import { CAREER_BY_ID } from '../careers.js';
 import {
   ACTION_LABELS, COST_RELEVANT_STAGES, DECISION_VERSION, GOAL_PROMOTES, SCHOOL_STAGES, STAGE_ACTIONS, THRESHOLDS, TIERS,
 } from './config.js';
-import { careerSupport, dependencyCandidates, fitTier, keepOpenCandidates, routeState, skillState, stageCandidates } from './candidates.js';
+import { academicCandidates, careerSupport, dependencyCandidates, fitTier, keepOpenCandidates, routeState, skillState, stageCandidates } from './candidates.js';
 
 const DEMAND_RANK = { very_high: 5, high: 4, moderate: 3, mixed: 2, low: 1, unknown: 0 };
 const nameOf = (id) => CAREER_BY_ID[id]?.name ?? id;
@@ -29,6 +29,8 @@ export function actionOrder(stage, goal) {
 
 function classify(bundle, t) {
   const school = SCHOOL_STAGES.includes(bundle.context.stage);
+  // Academic eligibility is a separate signal: attached as-is, never folded into fit or route.
+  const academicById = bundle.academic?.status === 'evaluated' ? Object.fromEntries(bundle.academic.careers.map((a) => [a.careerId, a])) : {};
   return bundle.careers.map((c) => {
     const skills = skillState(c, bundle.skills, t);
     // Module 3 pathways assume a post-B.Tech route: not applied to school stages.
@@ -38,7 +40,7 @@ function classify(bundle, t) {
       : route.status.startsWith('blocked') ? 'route_conflict'
         : route.status === 'dependent' ? 'dependent'
           : route.status === 'clear' ? 'clear' : 'unknown';
-    return { ...c, fitTier: fitTier(c.careerFit, t), support, route, skills, directionStatus: status };
+    return { ...c, fitTier: fitTier(c.careerFit, t), support, route, skills, directionStatus: status, academic: academicById[c.careerId] ?? null };
   });
 }
 
@@ -85,6 +87,7 @@ function evidenceOf(c) {
     route: c.route.route ? { id: c.route.route.id, title: c.route.route.title, chain: c.route.route.chain, status: c.route.status, committed: c.route.committed } : { status: c.route.status },
     market: c.market ? { demand: c.market.demand.level, trend: c.market.demand.trend, fresh: c.market.fresh, researchedAt: c.market.researchedAt, sources: c.market.demand.sources ?? [] } : null,
     skills: { demonstrated: c.skills.demonstrated, learnedNotProven: c.skills.learnedNotProven, missingCore: c.skills.missingCore, readiness: c.skills.readiness },
+    ...(c.academic ? { academic: { mode: c.academic.mode, status: c.academic.status, viableRoutes: c.academic.viableRoutes, evidenceLevel: c.academic.evidenceLevel } } : {}),
   };
 }
 
@@ -96,16 +99,19 @@ function constraintsOf(c, school) {
   if (c.feasibility?.category === 'barrier') out.push({ kind: 'soft', text: c.feasibility.consideration, module: 'feasibility' });
   if (c.support === 'conflict') out.push({ kind: 'soft', text: 'This career is less typically associated with what your family values', module: 'alignment' });
   if (c.market && !c.market.fresh) out.push({ kind: 'soft', text: 'Market research is out of date', module: 'market' });
+  // Only a definitive result counts; academic 'unknown' is never a constraint.
+  if (c.academic?.status === 'not_eligible') out.push({ kind: 'soft', text: 'No catalogued entry route is currently open on your academic record', module: 'academic' });
   return out;
 }
 
-function confidenceOf(bundle, c, school) {
+function confidenceOf(bundle, c, school, academicRecordMissing = false) {
   const missing = [];
   if (!bundle.modules.assessment) missing.push('assessment');
   if (!school || bundle.context.stage === 'school_12') if (!bundle.modules.feasibility) missing.push('feasibility');
   if (!school && !bundle.modules.alignment) missing.push('alignment');
   if (!school && c && !c.market) missing.push('market');
   if (!school && !bundle.skills.demonstrated.length) missing.push('demonstrated_skills');
+  if (academicRecordMissing) missing.push('academic_record');
   const stale = !school && c?.market && !c.market.fresh ? ['market'] : [];
   return { level: missing.length === 0 && !stale.length ? 'high' : missing.length <= 1 ? 'medium' : 'low', missing, stale, meaning: 'How complete the evidence is, not a prediction of success' };
 }
@@ -119,6 +125,7 @@ function rank(cands, order) {
     -(a._fit ?? 0),
     a.careerId ?? '',
     a.type,
+    a.qualification ?? a.subject ?? '',
   ];
   return [...cands].sort((x, y) => {
     const a = key(x);
@@ -165,6 +172,10 @@ export function decide(bundle, { thresholds = THRESHOLDS } = {}) {
       cands.push({ type: 'refresh_market', title: ACTION_LABELS.refresh_market, tier: 'later', careerId: c.careerId, steps: [`Open Market Intelligence for ${nameOf(c.careerId)}`], reasons: [{ text: c.market ? 'Cached research is out of date' : 'No market research cached for this career', basis: 'Module 4 cache' }] });
     }
   }
+  // Academic entry-route dependencies: results come from the eligibility engine, never computed here.
+  const academicCands = m.reason === 'no_assessment' ? [] : academicCandidates(bundle.academic, c ? [c] : (m.open ?? []));
+  cands.push(...academicCands);
+  academicCands.forEach((a) => trace.push({ rule: 'academic_dependency', detail: `${a.title} (${a.tier})` }));
   if (!cands.length && c) {
     cands.push({ type: 'explore_careers', title: ACTION_LABELS.explore_careers, tier: 'later', careerId: c.careerId, steps: ['Review your learning path or explore a specialisation'], reasons: [{ text: 'No open stage action remains for this direction', basis: 'Module 3 progress' }] });
   }
@@ -189,6 +200,10 @@ export function decide(bundle, { thresholds = THRESHOLDS } = {}) {
     if (c.route.status === 'blocked_with_alternative') wouldChange.push({ condition: 'Your family supporting the step the current route needs', change: 'The current route becomes viable again' });
   }
   if (!bundle.modules.feasibility && ctx.stage !== 'school_10') wouldChange.push({ condition: 'Completing the feasibility check', change: 'Cost, financing and family steps are taken into account' });
+  for (const a of academicCands) {
+    if (a.type === 'add_academic_record') wouldChange.push({ condition: `Adding your ${a.qualification === 'class_10' ? 'Class 10' : 'Class 12'} marks`, change: 'Entry-route eligibility becomes known instead of unknown' });
+    if (a.type === 'take_subject') wouldChange.push({ condition: a.title, change: a.steps[0] });
+  }
 
   const evidence = c ? evidenceOf(c) : null;
   return {
@@ -206,7 +221,7 @@ export function decide(bundle, { thresholds = THRESHOLDS } = {}) {
     alternatives: rest.slice(0, 3).map((a) => ({ action: a, whyNotFirst: whyNot(a) })),
     gated,
     readiness: c ? { level: c.skills.readiness.level, basis: c.skills.readiness.basis, value: c.skills.readiness.value, threshold: c.skills.readiness.threshold } : null,
-    confidence: confidenceOf(bundle, c, school),
+    confidence: confidenceOf(bundle, c, school, academicCands.some((a) => a.type === 'add_academic_record')),
     wouldChange,
     trace,
   };
