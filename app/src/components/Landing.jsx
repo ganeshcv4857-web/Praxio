@@ -1,3 +1,4 @@
+import Logo from './Logo.jsx';
 // Public landing page: what Praxio is, then sign up / log in (or enter the local demo).
 const LOOP = ['Discover', 'Learn', 'Apply', 'Build', 'Prove', 'Improve'];
 
@@ -11,7 +12,7 @@ export default function Landing({ onSignUp, onLogIn, demo }) {
   return (
     <div className="min-h-screen">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5">
-        <span className="text-xl font-extrabold tracking-tight">Praxio</span>
+        <Logo height={44} />
         {!demo && <button className="btn-ghost" onClick={onLogIn}>Log in</button>}
       </header>
 

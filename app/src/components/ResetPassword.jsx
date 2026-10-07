@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase.js';
+import Logo from './Logo.jsx';
 
 // Shown after the user follows a password-reset email link (PASSWORD_RECOVERY event).
 export default function ResetPassword({ onDone }) {
@@ -24,7 +25,7 @@ export default function ResetPassword({ onDone }) {
     <div className="grid min-h-screen place-items-center px-4">
       <form onSubmit={submit} className="card w-full max-w-md space-y-4">
         <div>
-          <div className="text-2xl font-extrabold">Praxio</div>
+          <Logo height={56} />
           <h1 className="mt-2 font-semibold">Choose a new password</h1>
         </div>
         <div>

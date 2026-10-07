@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Logo from './Logo.jsx';
 
 const NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: '⌂' },
@@ -35,7 +36,7 @@ export default function Shell({ activeTab, setActiveTab, profile, onSignOut, chi
   return (
     <div className="min-h-screen md:flex">
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-slate-800 p-4 md:flex">
-        <div className="mb-8 px-3 text-xl font-extrabold tracking-tight">Praxio</div>
+        <div className="mb-8 px-1"><Logo height={48} /></div>
         {navList}
         <div className="mt-auto border-t border-slate-800 px-3 pt-4">
           <p className="truncate text-sm font-medium">{profile?.full_name}</p>
@@ -44,7 +45,7 @@ export default function Shell({ activeTab, setActiveTab, profile, onSignOut, chi
       </aside>
 
       <header className="flex items-center justify-between border-b border-slate-800 px-4 py-3 md:hidden">
-        <span className="text-lg font-extrabold">Praxio</span>
+        <Logo height={36} />
         <button className="btn-ghost px-3 py-1" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen}>Menu</button>
       </header>
       {menuOpen && (

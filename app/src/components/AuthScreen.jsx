@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase.js';
+import Logo from './Logo.jsx';
 
 // Real Supabase Auth (email + password). Tabs mirror the original login/signup/forgot flow.
 export default function AuthScreen({ initialError = '', initialNotice = '', initialTab = 'login', onBack }) {
@@ -48,7 +49,7 @@ export default function AuthScreen({ initialError = '', initialNotice = '', init
     <div className="grid min-h-screen place-items-center px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="text-3xl font-extrabold tracking-tight">Praxio</div>
+          <Logo height={72} className="mx-auto" />
           <p className="mt-2 text-sm text-slate-400">Discover → Learn → Apply → Build → Prove → Improve</p>
         </div>
         <form onSubmit={submit} className="card space-y-4">
