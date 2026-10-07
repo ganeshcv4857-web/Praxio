@@ -23,6 +23,7 @@ import Alignment from './components/alignment/Alignment.jsx';
 import { evaluateAll } from './lib/feasibility/scoring.js';
 import { pickInputs as pickFeasibilityInputs } from './components/feasibility/FeasibilityWizard.jsx';
 import { FEASIBILITY_VERSION } from './lib/feasibility/config.js';
+import { userContext } from './lib/userContext.js';
 
 // Navigation (state-based, as before):
 //   screen:    'loading' | 'landing' | 'auth' | 'reset_password' | 'assessment' | 'app'
@@ -330,6 +331,7 @@ export default function App() {
         <Feasibility
           row={feasibility}
           recs={recs}
+          stage={userContext(profile).stage}
           onSave={saveFeasibility}
           onOpenCareer={openCareer}
           onPlanLearning={() => setActiveTab('development')}

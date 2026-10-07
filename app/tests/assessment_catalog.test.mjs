@@ -114,9 +114,11 @@ test('v1 → v2: the only differences from the old form are the approved changes
   }
 });
 
-test('Module 2 catalog still matches the wizard (changed in AA5)', () => {
+test('Module 2: location_preference retired; every remaining question has a consumer', () => {
   const wiz = C.CATALOG.filter((q) => q.assessment === 'feasibility');
-  assert.deepEqual(wiz.map((q) => q.id).sort(), ['education_budget', 'education_preference', 'family_priorities', 'income_band', 'loan_willingness', 'location_preference', 'primary_funder', 'relocation', 'risk_tolerance', 'scholarship_interest']);
+  assert.deepEqual(wiz.map((q) => q.id).sort(), ['education_budget', 'education_preference', 'family_priorities', 'income_band', 'loan_willingness', 'primary_funder', 'relocation', 'risk_tolerance', 'scholarship_interest']);
+  assert.ok(C.RETIRED_FEASIBILITY.location_preference);
+  assert.deepEqual([...C.AUDIT_NO_CONSUMER], []);
 });
 
 test('sliders have no default and offer "not sure"; Likert items offer "not sure"', () => {

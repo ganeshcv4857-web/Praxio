@@ -26,7 +26,7 @@ import { INTERESTS, APTITUDES, TRAITS, PREFERENCES, BRANCHES } from '../features
 import { APTITUDE_QUIZ } from '../quiz.js';
 import { SCHOOL_STREAMS, STAGES } from '../userContext.js';
 import {
-  BUDGET_BANDS, EDUCATION_OPTIONS, FAMILY_PRIORITIES, INCOME_BANDS, LOAN_OPTIONS, LOCATION_OPTIONS,
+  BUDGET_BANDS, EDUCATION_OPTIONS, FAMILY_PRIORITIES, INCOME_BANDS, LOAN_OPTIONS,
   PRIMARY_FUNDERS, RELOCATION_OPTIONS, RISK_LEVELS, SCHOLARSHIP_OPTIONS,
 } from '../feasibility/config.js';
 
@@ -47,6 +47,7 @@ const SCHOOL = ['school_10', 'school_11', 'school_12'];
 const NOT_10 = ['school_11', 'school_12', 'undergraduate', 'postgraduate', 'graduate_unemployed', 'employed_professional', 'career_switcher'];
 const DEGREE = ['undergraduate', 'postgraduate', 'graduate_unemployed', 'employed_professional', 'career_switcher'];
 const WORKING = ['employed_professional', 'career_switcher'];
+export const WORKING_STAGES = WORKING;
 // Stages asked whether they have tried programming before rating it (they may never have).
 export const PROGRAMMING_GATE_STAGES = [...SCHOOL, 'career_switcher'];
 
@@ -55,8 +56,12 @@ export const RETIRED = Object.freeze({
   int_people: 'No career weights it (assessment-v2)',
   current_activity: 'No module branches on it; stage implies a default (assessment-v2)',
 });
-// Audit finding still present (Module 2, retired in AA5); a test pins this list.
-export const AUDIT_NO_CONSUMER = Object.freeze(['location_preference']);
+// Module 2 questions retired from the wizard (no consumer). Stored values are kept.
+export const RETIRED_FEASIBILITY = Object.freeze({
+  location_preference: 'No module uses it; relocation carries the location signal (assessment-v2)',
+});
+// Audit findings still present; a test pins this list (empty: every question has a consumer).
+export const AUDIT_NO_CONSUMER = Object.freeze([]);
 
 const fit = (field) => [{ module: 'career_fit', use: `feature ${field.split('.').pop()}` }];
 const q = (o) => Object.freeze({ v: 1, goals: null, when: null, requires: [], required: false, unknown: null, priority: 50, ...o });
@@ -145,9 +150,9 @@ const QUESTIONS = [
     feeds: [...fit(it.key), ...(it.key === 'tr_risk' ? [{ module: 'alignment', use: 'student risk appetite' }] : [])] })),
 
   // ---- Module 2: feasibility wizard
-  q({ id: 'income_band', assessment: 'feasibility', page: 'finances', kind: 'choice', field: 'income_band', options: INCOME_BANDS.map((o) => o.id), stages: ALL, required: true, priority: 1,
-    label: 'Annual family income', purpose: 'Risk adjustment and repayment burden', feeds: [{ module: 'feasibility', use: 'risk tolerance adjustment, repayment burden' }] }),
-  q({ id: 'primary_funder', assessment: 'feasibility', page: 'finances', kind: 'choice', field: 'primary_funder', options: PRIMARY_FUNDERS.map((o) => o.id), stages: ALL, priority: 2,
+  q({ id: 'income_band', v: 2, assessment: 'feasibility', page: 'finances', kind: 'choice', field: 'income_band', options: INCOME_BANDS.map((o) => o.id), stages: ALL, required: true, priority: 1,
+    label: 'Annual family income', workingLabel: 'Annual household income', purpose: 'Risk adjustment and repayment burden', feeds: [{ module: 'feasibility', use: 'risk tolerance adjustment, repayment burden' }] }),
+  q({ id: 'primary_funder', v: 2, assessment: 'feasibility', page: 'finances', kind: 'choice', field: 'primary_funder', options: PRIMARY_FUNDERS.map((o) => o.id), stages: ALL, required: true, priority: 2,
     label: 'Who mainly pays', purpose: 'Who must act on funding', feeds: [{ module: 'feasibility', use: 'financing plan payer' }, { module: 'alignment', use: 'family funding actions' }] }),
   q({ id: 'education_budget', assessment: 'feasibility', page: 'finances', kind: 'choice', field: 'education_budget', options: BUDGET_BANDS.map((o) => o.id), stages: ALL, required: true, priority: 3,
     label: 'Education budget', purpose: 'What can be paid upfront', feeds: [{ module: 'feasibility', use: 'financial factor, financing plan' }] }),
@@ -155,15 +160,21 @@ const QUESTIONS = [
     label: 'Education loan', purpose: 'Whether a loan can close a gap', feeds: [{ module: 'feasibility', use: 'financing plan loan' }] }),
   q({ id: 'scholarship_interest', assessment: 'feasibility', page: 'finances', kind: 'choice', field: 'scholarship_interest', options: SCHOLARSHIP_OPTIONS.map((o) => o.id), stages: ALL, priority: 5,
     label: 'Scholarships', purpose: 'Whether scholarships are part of the plan', feeds: [{ module: 'feasibility', use: 'financing plan scholarship' }] }),
-  q({ id: 'risk_tolerance', assessment: 'feasibility', page: 'finances', kind: 'choice', field: 'risk_tolerance', options: RISK_LEVELS.map((o) => o.id), stages: ALL, required: true, priority: 6,
-    label: 'Family risk tolerance', purpose: 'Comfort with financial risk', feeds: [{ module: 'feasibility', use: 'risk factor' }, { module: 'alignment', use: 'family risk' }] }),
-  q({ id: 'education_preference', assessment: 'feasibility', page: 'education', kind: 'choice', field: 'education_preference', options: EDUCATION_OPTIONS.map((o) => o.id), stages: ALL, required: true, priority: 1,
-    label: 'How far to study', purpose: 'Education length the plan allows', feeds: [{ module: 'feasibility', use: 'education factor' }, { module: 'alignment', use: 'education dimension' }] }),
-  q({ id: 'location_preference', assessment: 'feasibility', page: 'education', kind: 'choice', field: 'location_preference', options: LOCATION_OPTIONS.map((o) => o.id), stages: ALL, required: true, priority: 2,
-    label: 'Where to work', purpose: 'Asked today, but no module uses the answer', feeds: [] }),
+  q({ id: 'risk_tolerance', v: 2, assessment: 'feasibility', page: 'finances', kind: 'choice', field: 'risk_tolerance', options: RISK_LEVELS.map((o) => o.id), stages: ALL, required: true, priority: 6,
+    label: 'Family risk tolerance', workingLabel: 'Household comfort with financial risk', purpose: 'Comfort with financial risk', feeds: [{ module: 'feasibility', use: 'risk factor' }, { module: 'alignment', use: 'family risk' }] }),
+  // Level 0 ('ug') means "no postgraduate study". Its wording assumed an undergraduate; for
+  // postgraduates and working people the same level is worded for where they are (same meaning).
+  q({ id: 'education_preference', v: 2, assessment: 'feasibility', page: 'education', kind: 'choice', field: 'education_preference', options: EDUCATION_OPTIONS.map((o) => o.id), stages: ALL, required: true, priority: 1,
+    label: 'How far to study', optionLabels: Object.freeze({
+      postgraduate: { ug: 'No further study after my current degree' },
+      employed_professional: { ug: 'No further formal study' },
+      career_switcher: { ug: 'No further formal study (short courses only)' },
+    }), purpose: 'Education length the plan allows', feeds: [{ module: 'feasibility', use: 'education factor' }, { module: 'alignment', use: 'education dimension' }] }),
   q({ id: 'relocation', assessment: 'feasibility', page: 'education', kind: 'choice', field: 'relocation', options: RELOCATION_OPTIONS.map((o) => o.id), stages: ALL, required: true, priority: 3,
     label: 'Willing to relocate', purpose: 'Mobility for where the work is', feeds: [{ module: 'feasibility', use: 'location factor' }, { module: 'alignment', use: 'location dimension' }] }),
-  q({ id: 'family_priorities', assessment: 'feasibility', page: 'priorities', kind: 'multi', field: 'family_priorities', options: FAMILY_PRIORITIES.map((o) => o.id), stages: ALL, priority: 1,
+  // Family priorities only when the family is involved in paying.
+  q({ id: 'family_priorities', v: 2, assessment: 'feasibility', page: 'priorities', kind: 'multi', field: 'family_priorities', options: FAMILY_PRIORITIES.map((o) => o.id), stages: ALL, priority: 1,
+    when: (a) => a.primary_funder !== 'self', requires: ['primary_funder'],
     label: 'What your family values', purpose: 'What the family hopes a career offers', feeds: [{ module: 'feasibility', use: 'family factor' }, { module: 'alignment', use: 'aspiration, priorities' }] }),
 ];
 

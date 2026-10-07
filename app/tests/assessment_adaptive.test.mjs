@@ -204,3 +204,51 @@ test('drafts keep temporarily hidden answers for resuming, without writing them 
   const flipped = { ...resumed, tried_programming: 'yes' };
   assert.equal(writeAnswers(flipped, planAssessment({}, flipped)).fields.aptitude.apt_programming, 4);
 });
+
+// ------------------------------------------------------------------ AA5: Module 2 stage gating
+const { isComplete, evaluateCareer } = await import('../src/lib/feasibility/scoring.js');
+const { readFileSync } = await import('node:fs');
+const wizard = (stage, form) => planAssessment({ stage }, form, C.CATALOG, { assessment: 'feasibility' });
+
+test('Module 2: self-funded → no family priorities; family or shared funding → asked', () => {
+  for (const stage of ['undergraduate', 'employed_professional', 'career_switcher']) {
+    const self = wizard(stage, { primary_funder: 'self' });
+    assert.ok(!self.visible.includes('family_priorities'), stage);
+    assert.deepEqual(self.pages.map((p) => p.id), ['finances', 'education'], 'the priorities page disappears');
+    for (const funder of ['family', 'shared']) assert.ok(wizard(stage, { primary_funder: funder }).visible.includes('family_priorities'), `${stage} ${funder}`);
+  }
+});
+
+test('Module 2: location is no longer asked or required; stored values still accepted', () => {
+  assert.ok(!wizard('undergraduate', {}).visible.includes('location_preference'));
+  const base = { income_band: '6to10', education_budget: '2to5', loan_willingness: 'no', risk_tolerance: 'moderate', education_preference: 'masters', relocation: 'india', family_priorities: [] };
+  assert.equal(isComplete(base), true, 'complete without location');
+  assert.equal(isComplete({ ...base, location_preference: 'india' }), true, 'legacy rows with a location stay complete');
+  assert.deepEqual(evaluateCareer('software-eng', base), evaluateCareer('software-eng', { ...base, location_preference: 'near_home' }), 'feasibility never used it');
+  assert.equal(isComplete({ ...base, relocation: '' }), false, 'other required inputs still required');
+});
+
+test('Module 2: postgraduates and working people never see "Start working after undergraduate degree"', () => {
+  const ug = C.QUESTION_BY_ID.education_preference;
+  for (const stage of ['postgraduate', 'employed_professional', 'career_switcher']) {
+    const label = ug.optionLabels[stage]?.ug;
+    assert.ok(label && !/undergraduate/i.test(label), stage);
+  }
+  assert.equal(ug.optionLabels.undergraduate, undefined, 'students keep the original wording');
+  assert.equal(ug.v, 2, 'wording change bumped the version');
+  assert.match(C.QUESTION_BY_ID.income_band.workingLabel, /household/i);
+  assert.match(C.QUESTION_BY_ID.risk_tolerance.workingLabel, /household/i);
+});
+
+test('Module 2: who pays must be chosen; page completeness follows the plan', () => {
+  assert.equal(C.QUESTION_BY_ID.primary_funder.required, true);
+  const p = wizard('employed_professional', { income_band: '6to10', education_budget: '2to5', loan_willingness: 'no', risk_tolerance: 'low' });
+  assert.equal(p.pages[0].complete, false, 'a working person must say who pays');
+  assert.equal(wizard('employed_professional', { income_band: '6to10', education_budget: '2to5', loan_willingness: 'no', risk_tolerance: 'low', primary_funder: 'self' }).pages[0].complete, true);
+});
+
+test('Module 2 migration only relaxes NOT NULL on location_preference', () => {
+  const sql = readFileSync(new URL('../supabase/migrations/20261012000000_feasibility_location_optional.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
+  assert.match(sql, /alter table public\.feasibility_assessments alter column location_preference drop not null/);
+  assert.ok(!/update |delete |drop column|policy/i.test(sql));
+});

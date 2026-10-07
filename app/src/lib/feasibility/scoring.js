@@ -32,8 +32,9 @@ const listLabels = (ids) => ids.map((id) => byId(FAMILY_PRIORITIES, id)?.label.t
 
 export function isComplete(inputs) {
   return Boolean(
+    // location_preference is no longer required: no factor uses it (retired in assessment-v2).
     inputs && inputs.income_band && inputs.education_budget && inputs.loan_willingness && inputs.risk_tolerance &&
-    inputs.education_preference && inputs.location_preference && inputs.relocation
+    inputs.education_preference && inputs.relocation
   );
 }
 

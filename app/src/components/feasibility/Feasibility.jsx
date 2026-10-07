@@ -6,7 +6,7 @@ import FeasibilityDashboard from './FeasibilityDashboard.jsx';
 // Module 2 entry: shows the input wizard until answers exist, then the dashboard.
 // Results are recalculated from the stored inputs and current Module 1 shortlist on
 // every render, so they always reflect the latest recommendations.
-export default function Feasibility({ row, recs, onSave, onOpenCareer, onPlanLearning }) {
+export default function Feasibility({ row, recs, stage, onSave, onOpenCareer, onPlanLearning }) {
   const inputs = pickInputs(row);
   const complete = isComplete(inputs);
   const [editing, setEditing] = useState(!complete);
@@ -19,6 +19,7 @@ export default function Feasibility({ row, recs, onSave, onOpenCareer, onPlanLea
       <FeasibilityWizard
         initial={row}
         careerCount={recs.length}
+        stage={stage}
         onCancel={complete ? () => setEditing(false) : null}
         onSubmit={async (form) => {
           await onSave(form);

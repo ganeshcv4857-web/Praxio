@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  BUDGET_BANDS, EDUCATION_OPTIONS, FAMILY_PRIORITIES, INCOME_BANDS, LOAN_OPTIONS, LOCATION_OPTIONS,
+  BUDGET_BANDS, EDUCATION_OPTIONS, FAMILY_PRIORITIES, INCOME_BANDS, LOAN_OPTIONS,
   PRIMARY_FUNDERS, RELOCATION_OPTIONS, RISK_LEVELS, SCHOLARSHIP_OPTIONS,
 } from '../../lib/feasibility/config.js';
+import { CATALOG, QUESTION_BY_ID, WORKING_STAGES } from '../../lib/assessment/catalog.js';
+import { planAssessment } from '../../lib/assessment/planner.js';
 
-const STEPS = ['Family & finances', 'Education & location', 'Family priorities'];
+// Which questions appear (and in which wording) comes from the assessment planner for the
+// person's stage; the page layout and styling are unchanged.
+const PAGE_TITLES = { finances: 'Family & finances', education: 'Education & location', priorities: 'Family priorities' };
 
 function Choice({ options, value, onChange, multi = false, columns = 'sm:grid-cols-3' }) {
   const selected = (id) => (multi ? value.includes(id) : value === id);
@@ -57,24 +61,37 @@ const EMPTY = {
   scholarship_interest: 'no',
 };
 
-export default function FeasibilityWizard({ initial, careerCount, onSubmit, onCancel }) {
+export default function FeasibilityWizard({ initial, careerCount, onSubmit, onCancel, stage = 'undergraduate' }) {
+  const working = WORKING_STAGES.includes(stage);
   const [step, setStep] = useState(0);
-  const [form, setForm] = useState(() => ({ ...EMPTY, ...pickInputs(initial) }));
+  // Working people are not assumed to be family-funded: they choose who pays.
+  const [form, setForm] = useState(() => ({ ...EMPTY, ...(working ? { primary_funder: '' } : {}), ...pickInputs(initial) }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }));
 
-  const canNext = [
-    form.income_band && form.education_budget && form.loan_willingness && form.risk_tolerance,
-    form.education_preference && form.location_preference && form.relocation,
-    true, // priorities are optional
-  ][step];
+  const plan = useMemo(() => planAssessment({ stage }, form, CATALOG, { assessment: 'feasibility' }), [stage, form]);
+  const pages = plan.pages;
+  // The priorities page can disappear (funder → self) while it is open: clamp the step.
+  const at = Math.min(step, pages.length - 1);
+  const page = pages[at];
+  const STEPS = pages.map((p) => (p.id === 'finances' && working ? 'Finances' : PAGE_TITLES[p.id]));
+  const shows = (id) => page.questions.includes(id);
+  const canNext = page.complete;
+  const label = (id, fallback) => (working && QUESTION_BY_ID[id].workingLabel) || fallback;
+  const educationOptions = EDUCATION_OPTIONS.map((o) => ({ ...o, label: QUESTION_BY_ID.education_preference.optionLabels[stage]?.[o.id] ?? o.label }));
 
   const submit = async () => {
     setBusy(true);
     setError('');
     try {
-      await onSubmit(form);
+      // Hidden questions create no answers; a retired, unanswered location is not sent at all.
+      const { location_preference, ...rest } = form;
+      await onSubmit({
+        ...rest,
+        family_priorities: plan.visible.includes('family_priorities') ? form.family_priorities : [],
+        ...(location_preference ? { location_preference } : {}),
+      });
     } catch (e) {
       setError(e.message);
       setBusy(false);
@@ -86,24 +103,24 @@ export default function FeasibilityWizard({ initial, careerCount, onSubmit, onCa
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-indigo-300">
-            Career feasibility · Step {step + 1} of {STEPS.length}
+            Career feasibility · Step {at + 1} of {STEPS.length}
           </p>
-          <h1 className="text-2xl font-bold">{STEPS[step]}</h1>
+          <h1 className="text-2xl font-bold">{STEPS[at]}</h1>
         </div>
         {onCancel && <button className="btn-ghost" onClick={onCancel}>Cancel</button>}
       </div>
       <div className="mb-6 h-1.5 overflow-hidden rounded-full bg-slate-800">
-        <div className="h-full bg-indigo-500 transition-all" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
+        <div className="h-full bg-indigo-500 transition-all" style={{ width: `${((at + 1) / STEPS.length) * 100}%` }} />
       </div>
 
       <div className="card space-y-6">
-        {step === 0 && (
+        {page.id === 'finances' && (
           <>
             <p className="text-sm text-slate-400">
               Rough answers are fine. These help check whether your {careerCount} recommended careers are realistic
-              for your family. Nothing here changes your career-fit scores.
+              for {working ? 'you' : 'your family'}. Nothing here changes your career-fit scores.
             </p>
-            <Question title="Annual family income">
+            <Question title={label('income_band', 'Annual family income')}>
               <Choice options={INCOME_BANDS} value={form.income_band} onChange={set('income_band')} />
             </Question>
             <Question title="Who will mainly pay for your education upfront?">
@@ -118,19 +135,16 @@ export default function FeasibilityWizard({ initial, careerCount, onSubmit, onCa
             <Question title="Will you apply for scholarships?" hint="Scholarships are never counted as guaranteed money.">
               <Choice options={SCHOLARSHIP_OPTIONS} value={form.scholarship_interest} onChange={set('scholarship_interest')} />
             </Question>
-            <Question title="Your family's comfort with financial risk" hint="e.g. a longer, costlier path or less predictable income early on.">
+            <Question title={label('risk_tolerance', "Your family's comfort with financial risk")} hint="e.g. a longer, costlier path or less predictable income early on.">
               <Choice options={RISK_LEVELS} value={form.risk_tolerance} onChange={set('risk_tolerance')} />
             </Question>
           </>
         )}
 
-        {step === 1 && (
+        {page.id === 'education' && (
           <>
             <Question title="How much additional education are you comfortable pursuing?">
-              <Choice options={EDUCATION_OPTIONS} value={form.education_preference} onChange={set('education_preference')} columns="sm:grid-cols-2" />
-            </Question>
-            <Question title="Preferred study / work location">
-              <Choice options={LOCATION_OPTIONS} value={form.location_preference} onChange={set('location_preference')} columns="sm:grid-cols-2" />
+              <Choice options={educationOptions} value={form.education_preference} onChange={set('education_preference')} columns="sm:grid-cols-2" />
             </Question>
             <Question title="Are you willing to relocate?">
               <Choice options={RELOCATION_OPTIONS} value={form.relocation} onChange={set('relocation')} />
@@ -138,7 +152,7 @@ export default function FeasibilityWizard({ initial, careerCount, onSubmit, onCa
           </>
         )}
 
-        {step === 2 && (
+        {page.id === 'priorities' && shows('family_priorities') && (
           <Question title="What matters most to your family when choosing a career?" hint="Select all that apply, or none.">
             <Choice options={FAMILY_PRIORITIES} value={form.family_priorities} onChange={set('family_priorities')} multi columns="sm:grid-cols-2" />
           </Question>
@@ -147,9 +161,9 @@ export default function FeasibilityWizard({ initial, careerCount, onSubmit, onCa
         {error && <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{error}</p>}
 
         <div className="flex justify-between pt-2">
-          <button className="btn-ghost" disabled={step === 0} onClick={() => setStep(step - 1)}>Back</button>
-          {step < STEPS.length - 1 ? (
-            <button className="btn-primary" disabled={!canNext} onClick={() => setStep(step + 1)}>Continue</button>
+          <button className="btn-ghost" disabled={at === 0} onClick={() => setStep(at - 1)}>Back</button>
+          {at < STEPS.length - 1 ? (
+            <button className="btn-primary" disabled={!canNext} onClick={() => setStep(at + 1)}>Continue</button>
           ) : (
             <button className="btn-primary" disabled={busy} onClick={submit}>
               {busy ? 'Calculating…' : 'Calculate feasibility'}
