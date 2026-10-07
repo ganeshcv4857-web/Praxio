@@ -12,6 +12,7 @@ import {
   RELOCATION_OPTIONS, RISK_LEVELS, WEIGHTS, byId,
 } from './config.js';
 import { CAREER_COSTS, LEVEL_INDEX, LEVEL_LABEL, formatCostRange, formatLakh } from './careerCosts.js';
+import { financingPlan } from './financing.js';
 
 export const FACTORS = [
   { id: 'financial', label: 'Financial' },
@@ -89,16 +90,21 @@ function educationFactor(cost, cap) {
   };
 }
 
-function riskFactor(cost, cap) {
-  const careerRisk = LEVEL_INDEX[cost.financialRisk];
+// Pathway risk = the career's financial risk, raised one level when financing it leaves a
+// HIGH long-term repayment burden (existing risk model + financing burden).
+function riskFactor(cost, cap, plan) {
+  const burdenBump = plan?.repayment.burden === 'high' ? 1 : 0;
+  const careerRisk = Math.min(2, LEVEL_INDEX[cost.financialRisk] + burdenBump);
+  const riskName = ['Low', 'Medium', 'High'][careerRisk];
   const tolerance = RISK_LEVELS[cap.effectiveRisk].label.toLowerCase();
-  const note = cap.lowIncome && cap.statedRisk > cap.effectiveRisk ? ' (adjusted down for family income)' : '';
+  const note = (cap.lowIncome && cap.statedRisk > cap.effectiveRisk ? ' (adjusted down for family income)' : '')
+    + (burdenBump ? ' (includes a high loan-repayment burden)' : '');
   if (careerRisk <= cap.effectiveRisk) {
-    return { score: 100, message: `${LEVEL_LABEL[cost.financialRisk]} pathway risk matches your family's ${tolerance} risk tolerance${note}` };
+    return { score: 100, message: `${riskName} pathway risk matches your family's ${tolerance} risk tolerance${note}` };
   }
   return {
     score: gapScore(careerRisk - cap.effectiveRisk),
-    message: `${LEVEL_LABEL[cost.financialRisk]} pathway risk is above your family's ${tolerance} risk tolerance${note}`,
+    message: `${riskName} pathway risk is above your family's ${tolerance} risk tolerance${note}`,
   };
 }
 
@@ -156,11 +162,15 @@ export function evaluateCareer(domainId, inputs) {
   const cost = CAREER_COSTS[domainId];
   if (!cost) return null;
   const cap = studentCapacity(inputs);
+  // Financing plan for the typical (midpoint) cost of this career's pathway.
+  const typicalCost = Math.round((cost.educationCost.low + cost.educationCost.high) / 2);
+  const typicalLevel = byId(EDUCATION_OPTIONS, cost.typicalEducation)?.level ?? 0;
+  const financing = financingPlan(typicalCost, inputs, { relocationLevel: LEVEL_INDEX[cost.relocationRequirement], educationLevel: typicalLevel });
 
   const raw = {
     financial: financialFactor(cost, cap),
     education: educationFactor(cost, cap),
-    risk: riskFactor(cost, cap),
+    risk: riskFactor(cost, cap, financing),
     location: locationFactor(cost, cap),
     family: familyFactor(cost, cap),
   };
@@ -191,6 +201,7 @@ export function evaluateCareer(domainId, inputs) {
     factors,
     weakest: hasIssue ? weakest : null,
     consideration,
+    financing,
   };
 }
 

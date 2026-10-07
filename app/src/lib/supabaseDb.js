@@ -56,9 +56,26 @@ export async function getProfile(userId) {
   return unwrap(await supabase.from('profiles').select('*').eq('id', userId).single());
 }
 
+// Columns added by migration 20261008000000. If it hasn't been applied yet, writes retry
+// without them so onboarding/feasibility keep working (context is then not persisted).
+const CONTEXT_COLUMNS = ['current_stage', 'current_activity', 'primary_goal', 'school_stream', 'current_role'];
+const FINANCING_COLUMNS = ['primary_funder', 'scholarship_interest'];
+const isMissingColumn = (e) => e?.code === 'PGRST204' || /column .* (does not exist|not found)|schema cache/i.test(e?.message ?? '');
+const without = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) => !keys.includes(k)));
+
+async function withColumnFallback(write, fields, optionalKeys) {
+  const first = await write(fields);
+  if (first.error && isMissingColumn(first.error) && optionalKeys.some((k) => k in fields)) {
+    console.warn('Database is missing new columns (run migration 20261008000000); saving without them.');
+    return unwrap(await write(without(fields, optionalKeys)));
+  }
+  return unwrap(first);
+}
+
 export async function saveProfile(userId, fields) {
-  return unwrap(
-    await supabase.from('profiles').update(fields).eq('id', userId).select().single()
+  return withColumnFallback(
+    (f) => supabase.from('profiles').update(f).eq('id', userId).select().single(),
+    fields, CONTEXT_COLUMNS
   );
 }
 
@@ -177,12 +194,9 @@ export async function getFeasibility(userId) {
 
 /** Upsert the student's single feasibility row (inputs + cached results). */
 export async function saveFeasibility(userId, inputs, results, configVersion) {
-  return unwrap(
-    await supabase
-      .from('feasibility_assessments')
-      .upsert({ user_id: userId, ...inputs, results, config_version: configVersion }, { onConflict: 'user_id' })
-      .select()
-      .single()
+  return withColumnFallback(
+    (f) => supabase.from('feasibility_assessments').upsert({ user_id: userId, ...f, results, config_version: configVersion }, { onConflict: 'user_id' }).select().single(),
+    inputs, FINANCING_COLUMNS
   );
 }
 

@@ -2,7 +2,7 @@
 // Bump FEASIBILITY_VERSION when weights, thresholds or option mappings change; stored
 // results record the version they were calculated with.
 
-export const FEASIBILITY_VERSION = '2026-10-07.1';
+export const FEASIBILITY_VERSION = '2026-10-08.1'; // + financing plan, burden-aware risk
 
 // Factor weights (must sum to 1).
 export const WEIGHTS = {
@@ -105,3 +105,24 @@ export const FAMILY_NEUTRAL_SCORE = 100;
 export const FAMILY_FLOOR = 30;
 
 export const byId = (list, id) => list.find((o) => o.id === id);
+
+// ---------------------------------------------------------------------------
+// Financing & action dependency (Review 1). Who pays, how the gap is financed,
+// who must act and the long-term burden; a loan is financing, not free money.
+// ---------------------------------------------------------------------------
+export const PRIMARY_FUNDERS = [
+  { id: 'family', label: 'My family' },
+  { id: 'self', label: 'Myself (savings / salary)' },
+  { id: 'shared', label: 'Shared between us' },
+];
+export const SCHOLARSHIP_OPTIONS = [
+  { id: 'no', label: 'No' },
+  { id: 'maybe', label: 'Maybe' },
+  { id: 'yes', label: 'Yes, I will apply' },
+];
+export const FINANCING_DEFAULTS = { primary_funder: 'family', scholarship_interest: 'no' };
+
+// Representative annual income per band (₹) — only to size repayment burden.
+export const INCOME_REFERENCE = { lt3: 2 * L, '3to6': 4.5 * L, '6to10': 8 * L, '10to20': 15 * L, gt20: 30 * L };
+// Loan ÷ annual household income: below 0.5 → low, below 1.5 → medium, else high burden.
+export const BURDEN_THRESHOLDS = { low: 0.5, medium: 1.5 };

@@ -15,10 +15,11 @@ import { buildFeatures } from '../features.js';
 import { CAREER_COSTS, LEVEL_INDEX } from '../feasibility/careerCosts.js';
 import { EDUCATION_OPTIONS, FAMILY_PRIORITIES, RELOCATION_OPTIONS, RISK_LEVELS, byId } from '../feasibility/config.js';
 import { studentCapacity } from '../feasibility/scoring.js';
+import { financingPlan, financingSummary } from '../feasibility/financing.js';
 import { CAREER_TRACKS, formatPrice } from '../development/catalog.js';
 import { PATHWAY_TYPES, buildPathways, pathwayChain } from '../development/pathways.js';
 import {
-  ASPIRATION_FLOOR, CATEGORIES, DIMENSIONS, FAMILY_INFERENCE, LEVEL_GAP_SCORES, MIN_COVERAGE, PRIORITY_MATCH,
+  ASPIRATION_FLOOR, BURDEN_PENALTY, CATEGORIES, CONDITIONAL_FINANCING_SCORE, DIMENSIONS, FAMILY_INFERENCE, LEVEL_GAP_SCORES, MIN_COVERAGE, PRIORITY_MATCH,
   RESEARCH_RISK_BUMP, SEVERITY_THRESHOLDS, STATUS_THRESHOLDS, STUDENT_RISK_LEVELS, WEIGHTS,
 } from './config.js';
 
@@ -107,19 +108,39 @@ export function evaluateDimensions({ careerId, pathway, profile, inputs, rec, ma
     dims.push(d);
   }
 
-  // B. Education cost: pathway cost vs. family budget (+ loan). Family amounts are never shown.
+  // B. Education cost — action-aware (Review 1): not "can the family afford it", but which
+  // financing actions the path needs from the family and whether they're willing to take them.
+  // Family amounts are never shown.
   {
-    const score = pathway.cost <= cap.fundingCap ? 100 : (100 * cap.fundingCap) / pathway.cost;
-    const relation = pathway.cost <= cap.budget ? 'Comfortably covers this path'
-      : pathway.cost <= cap.fundingCap ? 'Covers this path with an education loan'
-        : pathway.cost <= cap.fundingCap * 1.5 ? 'Somewhat below what this path costs'
-          : 'Well below what this path costs';
-    dims.push(dim('financial', score, {
+    const plan = financingPlan(pathway.cost, inputs, { relocationLevel: LEVEL_INDEX[costs.relocationRequirement], educationLevel: pathway.educationLevel });
+    const penalty = BURDEN_PENALTY[plan.repayment.burden] ?? 0;
+    const selfFunded = plan.primaryFunder === 'self' && plan.loanUsed === 0;
+    let score;
+    let family;
+    if (selfFunded && plan.status === 'funded') {
+      score = 100;
+      family = 'Not needed for funding (you are paying)';
+    } else if (plan.status === 'funded') {
+      score = 100;
+      family = 'Can fund this path upfront';
+    } else if (plan.status === 'financed') {
+      score = 100 - penalty;
+      family = 'Funds part upfront and is willing to co-apply for an education loan';
+    } else if (plan.status === 'conditional') {
+      score = CONDITIONAL_FINANCING_SCORE - penalty;
+      family = plan.loanState === 'maybe' && plan.remainingGap === 0 ? 'Undecided about co-applying for an education loan' : 'The remaining cost depends on a scholarship';
+    } else {
+      score = Math.min(50, (100 * (pathway.cost - plan.remainingGap)) / pathway.cost);
+      family = `Education budget: ${plan.remainingGap / pathway.cost < 0.33 ? 'somewhat below' : 'well below'} what this path costs`;
+    }
+    const d = dim('financial', score, {
       student: `${PATHWAY_TYPES[pathway.type].short} · about ${formatPrice(pathway.cost)}`,
-      family: `Education budget: ${relation.toLowerCase()}`,
-      reason: score >= 100 ? 'The family budget can support this route.' : 'This route costs more than the family can currently fund.',
-      basis: 'Module 2 budget + loan × Module 3 pathway cost',
-    }));
+      family,
+      reason: financingSummary(plan),
+      basis: 'Module 2 funding + loan + scholarship × Module 3 pathway cost (financing plan)',
+    });
+    d.financing = plan;
+    dims.push(d);
   }
 
   // C. Financial risk: pathway risk vs. family comfort; student appetite shown alongside.
@@ -217,6 +238,34 @@ export function evaluateDimensions({ careerId, pathway, profile, inputs, rec, ma
     }
   }
   return dims;
+}
+
+/**
+ * Actions the direct path needs from the family, and whether the family's stated
+ * answers support them: supported | conditional | not_supported | unknown.
+ */
+export function familyActions(plan, fam) {
+  const out = [];
+  for (const a of plan.actions.filter((x) => x.party.includes('family'))) {
+    let support = 'unknown';
+    let note = a.note ?? null;
+    if (a.id === 'upfront_funding') support = 'supported';
+    else if (a.id === 'loan_application') support = plan.loanState === 'yes' ? 'supported' : 'conditional';
+    else if (a.id === 'loan_repayment') {
+      support = plan.repayment.burden === 'high' || plan.loanState !== 'yes' ? 'conditional' : 'supported';
+      note = `Repayment burden: ${plan.repayment.burden}`;
+    } else if (a.id === 'relocation') support = fam.prefersProximity ? 'not_supported' : 'unknown';
+    else if (a.id === 'higher_studies') support = fam.education === 'open' ? 'supported' : fam.education === 'early_employment' ? 'not_supported' : 'unknown';
+    out.push({ ...a, support, note });
+  }
+  if (plan.remainingGap > 0) {
+    out.push({
+      id: 'fund_remaining', label: 'Fund the remaining cost', party: plan.primaryFunder === 'self' ? 'student' : 'family',
+      requirement: 'required', timing: 'before_start', support: plan.status === 'conditional' ? 'conditional' : 'not_supported',
+      note: 'No loan or confirmed scholarship covers this part yet',
+    });
+  }
+  return out;
 }
 
 /** Weighted alignment over known dimensions. */
@@ -350,6 +399,7 @@ export function alignCareer({ careerId, rec, recs = [rec], profile, inputs, mark
     aligned: base.dims.filter((d) => d.status === 'aligned'),
     conflicts: base.dims.filter((d) => d.status === 'conflict' || d.status === 'partial'),
     unknown: base.dims.filter((d) => d.status === 'unknown'),
+    familyActions: familyActions(base.dims.find((d) => d.dimension === 'financial').financing, familyStance(inputs)),
     paths,
     recommendedPathId: recommended.id,
   };

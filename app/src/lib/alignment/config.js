@@ -65,3 +65,9 @@ export const FAMILY_INFERENCE = {
 
 // Family priority ↔ student's own preference (Module 1/2). Values: 100 match, 60 partial, 20 mismatch.
 export const PRIORITY_MATCH = { match: 100, partial: 60, mismatch: 20 };
+
+// Financial dimension (action-aware): deduction for the long-term repayment burden when a
+// path relies on an education loan the family co-applies for.
+export const BURDEN_PENALTY = { low: 0, medium: 10, high: 25 };
+// A path that only works if an undecided loan or a scholarship comes through.
+export const CONDITIONAL_FINANCING_SCORE = 60;
