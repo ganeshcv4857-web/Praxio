@@ -14,7 +14,8 @@
 export const MARKET_CONFIG = {
   model: 'openai/gpt-oss-120b',
   endpoint: 'https://api.groq.com/openai/v1/chat/completions',
-  ttlDays: 7,                 // researched data is considered fresh for this long
+  ttlDays: 7,                 // MARKET_INTELLIGENCE_TTL_DAYS: researched data counts as fresh for this long
+  schemaVersion: 'market-v2', // bump when the record shape changes; older cached records are re-researched
   researchTimeoutMs: 90_000,
   structureTimeoutMs: 45_000,
   maxEvidence: 20,
@@ -25,10 +26,17 @@ export const MARKET_CONFIG = {
 };
 
 export const DEMAND_LEVELS = ['very_high', 'high', 'moderate', 'low', 'mixed', 'unknown'];
-export const LIST_FIELDS = [
-  'regions', 'core_skills', 'emerging_skills', 'education_expectations',
-  'industry_trends', 'opportunities', 'threats',
+export const DEMAND_TRENDS = ['growing', 'stable', 'declining', 'mixed', 'unknown'];
+export const REGION_SCOPES = ['india', 'global', 'remote'];
+// Plain sourced claims: { text, sources }
+export const CLAIM_FIELDS = [
+  'education_expectations', 'alternative_pathways', 'exams_certifications',
+  'industries_hiring', 'industry_trends', 'opportunities', 'threats',
 ];
+// Named skills: { skill, text, sources } — skill is a short name used for gap analysis
+export const SKILL_FIELDS = ['core_skills', 'tools', 'emerging_skills'];
+// Every array field in market (regions are { region, scope, text, sources })
+export const LIST_FIELDS = ['regions', ...SKILL_FIELDS, ...CLAIM_FIELDS];
 export const UNAVAILABLE_MESSAGE = 'Market intelligence temporarily unavailable.';
 
 export class MarketResearchError extends Error {
@@ -72,9 +80,10 @@ export function researchPrompt(ctx) {
     `Research the current job market for the career "${ctx.career.name}"${ctx.career.summary ? ` (${ctx.career.summary})` : ''}, focusing on ${where} and noting global context where relevant.`,
     ctx.student.branch ? `The student studies ${ctx.student.branch}${ctx.student.year ? `, year ${ctx.student.year}` : ''}.` : '',
     ctx.skills.length ? `Skills the student has demonstrated: ${ctx.skills.join(', ')}.` : '',
-    'Find: (1) current demand and hiring outlook, (2) salary ranges for entry, mid and senior levels with currency,',
-    '(3) regions/cities with the most opportunity, (4) core required skills, (5) emerging skills, (6) education expectations,',
-    '(7) industry trends, (8) opportunities, (9) threats or risks (e.g. automation, saturation).',
+    'Find: (1) current demand, hiring outlook and whether demand is growing or declining, (2) salary ranges for entry, mid and senior levels with currency,',
+    '(3) cities/regions with the most opportunity in India, global markets, and remote-work availability, (4) core required skills and commonly requested tools/technologies,',
+    '(5) emerging skills, (6) education expectations, alternative (non-degree) pathways, and important exams or certifications if genuinely relevant,',
+    '(7) industries hiring, (8) industry trends, (9) opportunities, (10) threats or risks (e.g. automation, saturation, competition).',
     'For every finding, mention the source it came from.',
   ].filter(Boolean).join('\n');
 }
@@ -84,11 +93,17 @@ Rules:
 - Use ONLY information present in the research notes and evidence list. Do not add knowledge of your own.
 - Every claim must cite the evidence ids (the numbers in the evidence list) that support it in "source_ids".
 - If a value is not supported by the evidence, use an empty string / empty list and leave source_ids empty. Never guess salaries.
-- Keep each claim to one concise sentence.
+- Keep each claim to one concise sentence. For skills and tools, "skill" is a short canonical name (e.g. "Python", "SQL", "Docker"), one per item.
+- regions: "scope" is "india" for Indian cities/regions, "global" for other countries, "remote" for remote-work availability.
 - confidence (0-100) reflects how well-sourced, recent and consistent the evidence is.`;
 
+const ids = { type: 'array', items: { type: 'integer' } };
 const claim = { type: 'object', additionalProperties: false, required: ['text', 'source_ids'],
-  properties: { text: { type: 'string' }, source_ids: { type: 'array', items: { type: 'integer' } } } };
+  properties: { text: { type: 'string' }, source_ids: ids } };
+const skillClaim = { type: 'object', additionalProperties: false, required: ['skill', 'text', 'source_ids'],
+  properties: { skill: { type: 'string' }, text: { type: 'string' }, source_ids: ids } };
+const regionClaim = { type: 'object', additionalProperties: false, required: ['region', 'scope', 'text', 'source_ids'],
+  properties: { region: { type: 'string' }, scope: { type: 'string', enum: REGION_SCOPES }, text: { type: 'string' }, source_ids: ids } };
 const band = { type: 'object', additionalProperties: false, required: ['range', 'source_ids'],
   properties: { range: { type: 'string' }, source_ids: { type: 'array', items: { type: 'integer' } } } };
 
@@ -104,11 +119,13 @@ export const STRUCTURE_SCHEMA = {
       additionalProperties: false,
       required: ['demand', 'salary', ...LIST_FIELDS],
       properties: {
-        demand: { type: 'object', additionalProperties: false, required: ['level', 'summary', 'source_ids'],
-          properties: { level: { type: 'string', enum: DEMAND_LEVELS }, summary: { type: 'string' }, source_ids: { type: 'array', items: { type: 'integer' } } } },
+        demand: { type: 'object', additionalProperties: false, required: ['level', 'trend', 'summary', 'source_ids'],
+          properties: { level: { type: 'string', enum: DEMAND_LEVELS }, trend: { type: 'string', enum: DEMAND_TRENDS }, summary: { type: 'string' }, source_ids: ids } },
         salary: { type: 'object', additionalProperties: false, required: ['currency', 'region', 'entry_level', 'mid_level', 'senior_level'],
           properties: { currency: { type: 'string' }, region: { type: 'string' }, entry_level: band, mid_level: band, senior_level: band } },
-        ...Object.fromEntries(LIST_FIELDS.map((f) => [f, { type: 'array', items: claim }])),
+        regions: { type: 'array', items: regionClaim },
+        ...Object.fromEntries(SKILL_FIELDS.map((f) => [f, { type: 'array', items: skillClaim }])),
+        ...Object.fromEntries(CLAIM_FIELDS.map((f) => [f, { type: 'array', items: claim }])),
       },
     },
     evidence_used: { type: 'array', items: { type: 'object', additionalProperties: false, required: ['id', 'publisher', 'published_at'],
@@ -201,21 +218,37 @@ export function validateMarketResearch(raw, evidence, { now = new Date(), model 
   const used = new Set();
   const cite = (ids) => { const c = cleanIds(ids, valid); c.forEach((i) => used.add(i)); return c; };
 
-  const lists = {};
-  for (const f of LIST_FIELDS) {
+  // Each item: drop it unless it has text and at least one real evidence id.
+  const cleanList = (f, shape) => {
     if (!Array.isArray(m[f])) fail(`market.${f} must be an array`);
-    lists[f] = m[f]
+    const out = m[f]
       .slice(0, MARKET_CONFIG.maxItemsPerList * 2)
       .map((item) => {
         if (!item || typeof item !== 'object') fail(`market.${f} items must be objects`);
         const text = str(item.text, MARKET_CONFIG.maxClaimChars);
         const sources = cleanIds(item.source_ids, valid);
-        return text && sources.length ? { text, sources } : null; // drop unsourced claims
+        if (!text || !sources.length) return null;
+        return shape(item, text, sources);
       })
       .filter(Boolean)
       .slice(0, MARKET_CONFIG.maxItemsPerList);
-    lists[f].forEach((c) => c.sources.forEach((i) => used.add(i)));
+    out.forEach((c) => c.sources.forEach((i) => used.add(i)));
+    return out;
+  };
+  const lists = {
+    regions: cleanList('regions', (item, text, sources) => {
+      if (!REGION_SCOPES.includes(item.scope)) fail('market.regions scope is invalid');
+      const region = str(item.region, 80);
+      return region ? { region, scope: item.scope, text, sources } : null;
+    }),
+  };
+  for (const f of SKILL_FIELDS) {
+    lists[f] = cleanList(f, (item, text, sources) => {
+      const skill = str(item.skill, 60);
+      return skill ? { skill, text, sources } : null;
+    });
   }
+  for (const f of CLAIM_FIELDS) lists[f] = cleanList(f, (_item, text, sources) => ({ text, sources }));
 
   const bandOut = (b, name) => {
     if (!b || typeof b !== 'object') fail(`market.salary.${name} is missing`);
@@ -231,8 +264,10 @@ export function validateMarketResearch(raw, evidence, { now = new Date(), model 
     senior_level: bandOut(m.salary.senior_level, 'senior_level'),
   };
   const demandSources = str(m.demand.summary, 600) ? cite(m.demand.source_ids) : cleanIds(m.demand.source_ids, valid) && [];
+  if (!DEMAND_TRENDS.includes(m.demand.trend)) fail('market.demand.trend is invalid');
   const demand = {
     level: demandSources.length ? m.demand.level : 'unknown',
+    trend: demandSources.length ? m.demand.trend : 'unknown',
     summary: demandSources.length ? str(m.demand.summary, 600) : '',
     sources: demandSources,
   };
@@ -269,6 +304,7 @@ export function validateMarketResearch(raw, evidence, { now = new Date(), model 
     expires_at: new Date(now.getTime() + MARKET_CONFIG.ttlDays * 86_400_000).toISOString(),
     provider: 'groq',
     model,
+    schema_version: MARKET_CONFIG.schemaVersion,
   };
 }
 
@@ -277,7 +313,9 @@ export function isValidMarketRecord(r) {
   if (!r || typeof r !== 'object') return false;
   if (typeof r.career !== 'string' || !r.career) return false;
   if (!r.market || typeof r.market !== 'object') return false;
+  if (r.schema_version !== MARKET_CONFIG.schemaVersion) return false; // older shapes are re-researched
   if (!LIST_FIELDS.every((f) => Array.isArray(r.market[f]))) return false;
+  if (!r.market.demand || !DEMAND_LEVELS.includes(r.market.demand.level)) return false;
   if (!Number.isFinite(r.confidence) || r.confidence < 0 || r.confidence > 100) return false;
   if (!Array.isArray(r.sources) || !r.sources.length) return false;
   if (!r.sources.every((s) => typeof s.url === 'string' && isPublicHttpUrl(s.url) && typeof s.title === 'string')) return false;

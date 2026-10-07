@@ -71,7 +71,7 @@ export default function Dashboard({ userId, profile, recs, feasibilityRow, asses
     { n: 1, title: 'Career assessment', status: m1Done ? 'done' : m1Active ? 'active' : 'ready', detail: m1Done ? `${recs.length} careers matched` : m1Active ? `Step ${assessmentSession.current_step + 1} of ${ASSESSMENT_STEPS}` : 'Not started', tab: m1Done ? 'results' : null },
     { n: 2, title: 'Career feasibility', status: m2Done ? 'done' : m1Done ? (feasibilityRow ? 'active' : 'ready') : 'locked', detail: m2Done ? `${Object.values(feas).filter((f) => f.category === 'high').length} highly feasible` : m1Done ? 'Family & financial check' : 'After Module 1', tab: m1Done ? 'feasibility' : null },
     { n: 3, title: 'Career development', status: !m2Done ? 'locked' : modulesTotal && modulesDone === modulesTotal ? 'done' : m3Started ? 'active' : 'ready', detail: !m2Done ? 'After Module 2' : m3Started ? `${modulesDone}/${modulesTotal} modules · ${progress.points} pts` : 'Learning path ready', tab: m2Done ? 'development' : null },
-    { n: 4, title: 'Market intelligence', status: 'soon', detail: 'Live demand, salaries and skills', tab: null },
+    { n: 4, title: 'Market intelligence', status: m1Done ? 'ready' : 'locked', detail: m1Done ? 'Demand, salaries & your skill gaps' : 'After Module 1', tab: m1Done ? 'market' : null },
   ];
 
   const isNew = !m1Done && !m1Active;

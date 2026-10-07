@@ -37,17 +37,28 @@ const executedTools = [{
 const validStructured = {
   career: 'Data Scientist',
   market: {
-    demand: { level: 'high', summary: 'Hiring for data scientists in India grew about 18% year on year.', source_ids: [1] },
+    demand: { level: 'high', trend: 'growing', summary: 'Hiring for data scientists in India grew about 18% year on year.', source_ids: [1] },
     salary: {
       currency: 'INR', region: 'India',
       entry_level: { range: '₹6–12 LPA', source_ids: [2] },
       mid_level: { range: '₹15–25 LPA', source_ids: [2] },
       senior_level: { range: '', source_ids: [] },
     },
-    regions: [{ text: 'Bengaluru, Hyderabad and Pune lead hiring.', source_ids: [1] }],
-    core_skills: [{ text: 'Python, SQL and statistics are expected.', source_ids: [1, 2] }],
-    emerging_skills: [{ text: 'LLM application development is in demand.', source_ids: [3] }],
+    regions: [
+      { region: 'Bengaluru', scope: 'india', text: 'Bengaluru leads data science hiring.', source_ids: [1] },
+      { region: 'Remote', scope: 'remote', text: 'Remote data roles are common.', source_ids: [1] },
+    ],
+    core_skills: [
+      { skill: 'Python', text: 'Python is expected in most postings.', source_ids: [1, 2] },
+      { skill: 'SQL', text: 'SQL is a baseline requirement.', source_ids: [1] },
+      { skill: 'Statistics', text: 'Statistics underpins the role.', source_ids: [2] },
+    ],
+    tools: [{ skill: 'Docker', text: 'Docker appears in many postings.', source_ids: [1] }],
+    emerging_skills: [{ skill: 'LLMs', text: 'LLM application development is in demand.', source_ids: [3] }],
     education_expectations: [{ text: 'Unsourced claim that should be dropped.', source_ids: [] }],
+    alternative_pathways: [],
+    exams_certifications: [],
+    industries_hiring: [{ text: 'BFSI and e-commerce hire the most data scientists.', source_ids: [1] }],
     industry_trends: [{ text: 'GenAI adoption is reshaping analytics roles.', source_ids: [99] }],
     opportunities: [],
     threats: [{ text: 'Entry-level competition is intensifying.', source_ids: [1] }],
@@ -87,6 +98,10 @@ test('valid research: structured, source-backed, timestamped record', async () =
   assert.equal(r.expires_at, new Date(NOW.getTime() + 7 * 86400000).toISOString());
   assert.equal(r.provider, 'groq');
   assert.ok(M.isValidMarketRecord(r));
+  assert.equal(r.schema_version, 'market-v2');
+  assert.equal(r.market.demand.trend, 'growing');
+  assert.deepEqual(r.market.core_skills.map((s) => s.skill), ['Python', 'SQL', 'Statistics']);
+  assert.deepEqual(r.market.regions.map((x) => x.scope), ['india', 'remote']);
   // Sources come only from executed search results, each with access timestamp.
   assert.deepEqual(r.sources.map((s) => s.url).sort(), [
     'https://www.ambitionbox.com/data-scientist-salary',
@@ -111,7 +126,7 @@ test('unsourced and fabricated-source claims are dropped; confidence capped by e
   assert.deepEqual(r.market.industry_trends, [], 'claim citing non-existent source 99 dropped');
   assert.ok(r.confidence <= 30 + 15 * r.sources.length);
   const one = await run({ fetchImpl: fakeGroq({ structured: { ...validStructured, market: { ...validStructured.market,
-    emerging_skills: [], core_skills: [], salary: { ...validStructured.market.salary, entry_level: { range: '', source_ids: [] }, mid_level: { range: '', source_ids: [] } } } } }).fetchImpl });
+    emerging_skills: [], core_skills: [], tools: [], regions: [], industries_hiring: [], salary: { ...validStructured.market.salary, entry_level: { range: '', source_ids: [] }, mid_level: { range: '', source_ids: [] } } } } }).fetchImpl });
   assert.equal(one.sources.length, 1);
   assert.equal(one.confidence, 45, '90 proposed, capped at 30 + 15×1');
 });
@@ -139,6 +154,9 @@ test('missing required fields are rejected', async () => {
     { ...validStructured, market: { ...validStructured.market, regions: 'Bengaluru' } },
     { ...validStructured, market: { ...validStructured.market, demand: { level: 'skyrocketing', summary: 'x', source_ids: [1] } } },
     { ...validStructured, market: { ...validStructured.market, salary: undefined } },
+    { ...validStructured, market: { ...validStructured.market, demand: { ...validStructured.market.demand, trend: 'rocketing' } } },
+    { ...validStructured, market: { ...validStructured.market, regions: [{ region: 'Mars', scope: 'space', text: 'x', source_ids: [1] }] } },
+    { ...validStructured, market: { ...validStructured.market, tools: undefined } },
   ];
   for (const structured of cases) {
     await assert.rejects(run({ fetchImpl: fakeGroq({ structured }).fetchImpl }), (e) => e.code === 'invalid_output');
@@ -172,9 +190,9 @@ test('no search evidence → fails instead of answering from model memory', asyn
   assert.equal(calls.length, 1, 'structuring stage never runs without evidence');
   // All claims citing nothing real → no_evidence too.
   const allBad = { ...validStructured, market: { ...validStructured.market,
-    demand: { level: 'high', summary: 'x', source_ids: [42] },
+    demand: { level: 'high', trend: 'growing', summary: 'x', source_ids: [42] },
     salary: { currency: '', region: '', entry_level: { range: '1', source_ids: [] }, mid_level: { range: '', source_ids: [] }, senior_level: { range: '', source_ids: [] } },
-    regions: [], core_skills: [], emerging_skills: [], education_expectations: [], industry_trends: [], opportunities: [], threats: [] } };
+    regions: [], core_skills: [], tools: [], emerging_skills: [], education_expectations: [], alternative_pathways: [], exams_certifications: [], industries_hiring: [], industry_trends: [], opportunities: [], threats: [] } };
   await assert.rejects(run({ fetchImpl: fakeGroq({ structured: allBad }).fetchImpl }), (e) => e.code === 'no_evidence');
 });
 

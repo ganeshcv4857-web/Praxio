@@ -7,10 +7,10 @@ import * as db from './db.js';
 import { invoke } from './ai.js';
 import { CAREER_BY_ID } from './careers.js';
 import { BRANCHES } from './features.js';
-import { isValidMarketRecord, UNAVAILABLE_MESSAGE } from '../../supabase/functions/career-ai/market.js';
+import { isValidMarketRecord, MARKET_CONFIG, UNAVAILABLE_MESSAGE } from '../../supabase/functions/career-ai/market.js';
 
 export { UNAVAILABLE_MESSAGE };
-export const MARKET_CONTEXT_VERSION = 'market-v1';
+export const MARKET_CONTEXT_VERSION = MARKET_CONFIG.schemaVersion;
 
 /**
  * Minimum context for research: career + branch/year/location + demonstrated skill names.
@@ -28,6 +28,21 @@ export function buildMarketContext(careerId, profile, { location = 'India', skil
     },
     skills: skills.slice(0, 30),
   };
+}
+
+/**
+ * Cache-only read (no Groq call): the latest valid record for a career, fresh or not.
+ * Returns { record, fresh } or null. Used to render pages and comparisons cheaply.
+ */
+export async function getCachedMarketIntelligence(userId, careerId, now = new Date()) {
+  try {
+    const row = await db.getLatestGeneratedOutput(userId, 'career', careerId, 'market_insight');
+    if (!row || !isValidMarketRecord(row.content)) return null;
+    return { record: row.content, fresh: new Date(row.content.expires_at) > now };
+  } catch (e) {
+    console.warn('Market cache read failed', e);
+    return null;
+  }
 }
 
 const fresh = (row, now) => row && row.expires_at && new Date(row.expires_at) > now && isValidMarketRecord(row.content);

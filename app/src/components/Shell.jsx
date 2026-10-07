@@ -7,6 +7,7 @@ const NAV = [
   { id: 'career', label: 'Career pathway', icon: '↗' },
   { id: 'feasibility', label: 'Feasibility', icon: '⚖' },
   { id: 'development', label: 'Learning path', icon: '▲' },
+  { id: 'market', label: 'Market', icon: '◆' },
   { id: 'advisor', label: 'Ask the advisor', icon: '✦' },
   { id: 'profile', label: 'My profile', icon: '◐' },
 ];

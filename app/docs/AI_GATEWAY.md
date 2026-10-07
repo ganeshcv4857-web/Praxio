@@ -1,5 +1,7 @@
 # Praxio AI Gateway (`career-ai`) & Groq Market Intelligence
 
+> The research record is now **schema `market-v2`** (named skills/tools, regions with scope, demand trend, certifications, pathways, industries). The Market Intelligence module built on it is documented in [MARKET_INTELLIGENCE.md](MARKET_INTELLIGENCE.md).
+
 ## Why Groq
 
 Praxio's deterministic engines (Career Fit, Feasibility, pathway ranking, evaluation
