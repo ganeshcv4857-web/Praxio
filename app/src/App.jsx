@@ -105,7 +105,7 @@ export default function App() {
     }
     // Restores the persisted session on load (INITIAL_SESSION) and follows sign-in,
     // sign-out, token refresh failures and password recovery.
-    let loadedFor = null;
+    let loadedFor; // undefined until the first auth event, so a signed-out first visit isn't skipped
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       setSession(s);
       if (event === 'PASSWORD_RECOVERY') {
