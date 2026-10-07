@@ -290,3 +290,74 @@ test('groqChat sends the same system prompt + mapped history, no tools', async (
   assert.equal(sent.tools, undefined);
   await assert.rejects(M.groqChat({ apiKey: 'k', system: 's', message: 'x', fetchImpl: async () => ({ ok: true, json: async () => ({ choices: [{ message: { content: '' } }] }) }) }));
 });
+
+// ------------------------------------------------------------ advisor scope guardrails
+const A = await import('../supabase/functions/career-ai/advisor.js');
+
+/** Fake Groq: classifier (json_schema) returns `category`; main chat returns a reply. */
+function fakeAdvisorGroq(category, { classifierFails = false } = {}) {
+  const calls = [];
+  const fetchImpl = async (_u, init) => {
+    const body = JSON.parse(init.body);
+    calls.push(body);
+    if (body.response_format) {
+      if (classifierFails) return { ok: false, status: 503, json: async () => ({}) };
+      return { ok: true, json: async () => ({ choices: [{ message: { content: JSON.stringify({ category }) } }] }) };
+    }
+    return { ok: true, json: async () => ({ choices: [{ message: { content: 'Here is some help.' } }] }) };
+  };
+  return { fetchImpl, calls };
+}
+const ask = (fake, message, history = []) => A.advisorReply({ apiKey: 'k', system: 'BASE', history, message, fetchImpl: fake.fetchImpl });
+
+test('guardrail: off-topic (e.g. Tamil Nadu politics) gets the fixed refusal, main model never called', async () => {
+  const fake = fakeAdvisorGroq('off_topic');
+  const r = await ask(fake, 'Who will win the next Tamil Nadu election, DMK or AIADMK?');
+  assert.equal(r.reply, A.OFF_TOPIC_REPLY);
+  assert.match(r.reply, /^Sorry, that's out of context/);
+  assert.equal(r.scope, 'off_topic');
+  assert.equal(fake.calls.length, 1, 'only the classifier ran');
+  assert.equal(fake.calls[0].model, 'openai/gpt-oss-20b');
+});
+
+test('guardrail: technical, career, learning and planning questions are answered with scope rules', async () => {
+  for (const [category, q] of [
+    ['technical', 'What are substitutes for XGBoost and what should I use for tabular data?'],
+    ['career', 'Is VLSI a good career for me?'],
+    ['learning', 'Make me a 6-week plan to learn SQL'],
+    ['planning', 'How should I plan my third year to get an internship?'],
+  ]) {
+    const fake = fakeAdvisorGroq(category);
+    const r = await ask(fake, q);
+    assert.equal(r.reply, 'Here is some help.', category);
+    assert.equal(r.scope, category);
+    assert.equal(fake.calls.length, 2);
+    assert.ok(fake.calls[1].messages[0].content.startsWith('BASE'), 'base advisor prompt kept');
+    assert.match(fake.calls[1].messages[0].content, /OUT OF SCOPE: politics/, 'scope rules appended');
+  }
+});
+
+test('guardrail: plain greetings skip the classifier and get a normal reply', async () => {
+  for (const g of ['hi', 'Hello!', 'hey', 'thanks', 'good morning', 'vanakkam', 'how are you?']) {
+    assert.ok(A.isPlainGreeting(g), g);
+    const fake = fakeAdvisorGroq('off_topic'); // would refuse if the classifier were consulted
+    const r = await ask(fake, g);
+    assert.equal(r.scope, 'greeting');
+    assert.equal(fake.calls.length, 1, 'main chat only');
+  }
+  assert.ok(!A.isPlainGreeting('hi, who is the chief minister of Tamil Nadu?'), 'greeting prefix does not bypass the classifier');
+});
+
+test('guardrail: classifier failure falls back to the prompt-level scope rules (no hard block)', async () => {
+  const fake = fakeAdvisorGroq(null, { classifierFails: true });
+  const r = await ask(fake, 'Explain gradient boosting');
+  assert.equal(r.reply, 'Here is some help.');
+  assert.equal(r.scope, 'unclassified');
+  assert.match(fake.calls.at(-1).messages[0].content, /reply ONLY with: "Sorry, that's out of context/);
+});
+
+test('guardrail: follow-ups are classified with recent conversation', async () => {
+  const fake = fakeAdvisorGroq('technical');
+  await ask(fake, 'what about the second one?', [{ role: 'user', content: 'alternatives to XGBoost?' }, { role: 'model', content: 'LightGBM, CatBoost…' }]);
+  assert.match(fake.calls[0].messages[1].content, /alternatives to XGBoost/);
+});

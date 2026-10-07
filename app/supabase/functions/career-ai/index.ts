@@ -13,7 +13,8 @@
 // and scored shortlist (see buildContext there).
 
 import { checkMode, requireUser, resolveProvider } from './gateway.js';
-import { MARKET_CONFIG, MarketResearchError, UNAVAILABLE_MESSAGE, groqChat, researchMarket } from './market.js';
+import { MARKET_CONFIG, MarketResearchError, UNAVAILABLE_MESSAGE, researchMarket } from './market.js';
+import { advisorReply } from './advisor.js';
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') ?? '';
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
@@ -71,13 +72,14 @@ Rules:
 - "watch_out": 1 sentence on the most relevant gap and what would close it. If no meaningful gap, give one honest consideration about the field instead.
 - "grounded_on": the feature ids (from the drivers) your explanation relies on.`;
 
-const CHAT_SYSTEM = (ctx: Context) => `You are the career advisor inside a career-discovery app for engineering students.
-The student has completed a profile and received the recommendations below. Help them understand and explore these options: why a domain fits, how domains compare, what a pathway looks like, what to try next.
+const CHAT_SYSTEM = (ctx: Context) => `You are the Praxio advisor for engineering students.
+The student has completed a profile and received the career recommendations below. Help them understand and explore these options (why a domain fits, how domains compare, what a pathway looks like, what to try next), and also help with technical and programming questions, learning and study plans, projects, and planning or strategy for their studies and career.
 
 ${profileBlock(ctx)}
 
 Guidelines:
 - Base personal claims only on the data above. If something isn't in the data, say so or ask.
+- For technical questions, give correct, practical help (explanations, alternatives, code snippets in fenced blocks) and relate it to their goals where it helps.
 - Explain scores honestly: they come from a weighted model of the student's own answers, not a prediction of success.
 - If asked about a domain not on the list, discuss it openly and relate it to their answers.
 - Keep answers focused and practical. Use short Markdown: bold labels, bullets, numbered steps for plans.
@@ -150,7 +152,8 @@ async function explain(ctx: Context) {
 async function chat(ctx: Context, history: { role: string; content: string }[], message: string) {
   // The advisor runs on Groq (same system prompt and grounding context as before).
   if (resolveProvider('chat', { GEMINI_API_KEY, GROQ_API_KEY }) === 'groq') {
-    return groqChat({ apiKey: GROQ_API_KEY, model: GROQ_MODEL, system: CHAT_SYSTEM(ctx), history, message });
+    // Guarded: off-topic messages get a polite refusal and never reach the main model.
+    return advisorReply({ apiKey: GROQ_API_KEY, model: GROQ_MODEL, system: CHAT_SYSTEM(ctx), history, message });
   }
   const contents = [
     ...history.slice(-10).map((m) => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.content }] })),
