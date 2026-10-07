@@ -10,7 +10,7 @@ globalThis.localStorage = {
 console.warn = () => {};
 
 const M = await import('../supabase/functions/career-ai/market.js');
-const { MODE_PROVIDERS, checkMode, requireUser } = await import('../supabase/functions/career-ai/gateway.js');
+const { MODE_PROVIDERS, checkMode, requireUser, resolveProvider } = await import('../supabase/functions/career-ai/gateway.js');
 const { getMarketIntelligence, buildMarketContext } = await import('../src/lib/marketIntelligence.js');
 const { DEMO_USER_ID, resetDemo, readDemoSnapshot } = await import('../src/lib/demoDb.js');
 
@@ -194,7 +194,7 @@ test('evidence extraction ignores private/local URLs and model-text URLs', () =>
 test('existing modes still route to Gemini; market_research to Groq; keys checked per mode', () => {
   assert.deepEqual(
     Object.fromEntries(['explain', 'chat', 'project', 'evaluate'].map((m) => [m, MODE_PROVIDERS[m]])),
-    { explain: 'gemini', chat: 'gemini', project: 'gemini', evaluate: 'gemini' }
+    { explain: 'gemini', chat: 'groq', project: 'gemini', evaluate: 'gemini' }
   );
   assert.equal(MODE_PROVIDERS.market_research, 'groq');
   assert.equal(checkMode('explain', { GEMINI_API_KEY: 'g' }), null);
@@ -269,4 +269,24 @@ test('gateway requires a real signed-in user, not just the public key', async ()
 test('Groq error message is surfaced as a short diagnostic, never the key', async () => {
   const fetchImpl = async () => ({ ok: false, status: 400, json: async () => ({ error: { message: 'tool_choice is invalid for this model' } }) });
   await assert.rejects(run({ fetchImpl }), (e) => e.code === 'upstream' && e.detail === 'Groq HTTP 400: tool_choice is invalid for this model' && !e.detail.includes('test-key'));
+});
+
+// ------------------------------------------------------------ advisor chat fallback
+test('advisor chat runs on Groq only', () => {
+  assert.equal(resolveProvider('chat', { GEMINI_API_KEY: 'g', GROQ_API_KEY: 'q' }), 'groq');
+  assert.equal(resolveProvider('chat', { GEMINI_API_KEY: 'g' }), null, 'no Gemini fallback');
+  assert.equal(checkMode('chat', { GROQ_API_KEY: 'q' }), null);
+  assert.equal(checkMode('chat', { GEMINI_API_KEY: 'g' }).status, 503);
+  for (const m of ['explain', 'project', 'evaluate']) assert.equal(resolveProvider(m, { GROQ_API_KEY: 'q' }), null, m + ' still Gemini');
+});
+
+test('groqChat sends the same system prompt + mapped history, no tools', async () => {
+  let sent;
+  const fetchImpl = async (_u, init) => { sent = JSON.parse(init.body); return { ok: true, json: async () => ({ choices: [{ message: { content: ' **VLSI** fits because… ' } }] }) }; };
+  const r = await M.groqChat({ apiKey: 'k', system: 'SYSTEM PROMPT', history: [{ role: 'user', content: 'hi' }, { role: 'model', content: 'hello' }], message: 'Why VLSI?', fetchImpl });
+  assert.equal(r.reply, '**VLSI** fits because…');
+  assert.deepEqual(sent.messages.map((m) => m.role), ['system', 'user', 'assistant', 'user']);
+  assert.equal(sent.messages[0].content, 'SYSTEM PROMPT');
+  assert.equal(sent.tools, undefined);
+  await assert.rejects(M.groqChat({ apiKey: 'k', system: 's', message: 'x', fetchImpl: async () => ({ ok: true, json: async () => ({ choices: [{ message: { content: '' } }] }) }) }));
 });

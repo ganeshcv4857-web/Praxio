@@ -3,7 +3,7 @@
 //
 // Deployed with JWT verification on (Supabase default), so only signed-in users can call it.
 //   POST { mode: 'explain', context }                -> { explanations: { [domainId]: {...} }, model }   (Gemini)
-//   POST { mode: 'chat', context, history, message } -> { reply, model }                                 (Gemini)
+//   POST { mode: 'chat', context, history, message } -> { reply, model }                                 (Groq)
 //   POST { mode: 'project', context }                -> { customisation, model }                          (Gemini)
 //   POST { mode: 'evaluate', context }               -> { evaluation, model }                             (Gemini)
 //   POST { mode: 'market_research', context }        -> { research }                                      (Groq)
@@ -12,8 +12,8 @@
 // `context` is built client-side by src/lib/ai.js from the student's own saved profile
 // and scored shortlist (see buildContext there).
 
-import { checkMode, requireUser } from './gateway.js';
-import { MARKET_CONFIG, MarketResearchError, UNAVAILABLE_MESSAGE, researchMarket } from './market.js';
+import { checkMode, requireUser, resolveProvider } from './gateway.js';
+import { MARKET_CONFIG, MarketResearchError, UNAVAILABLE_MESSAGE, groqChat, researchMarket } from './market.js';
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') ?? '';
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
@@ -148,6 +148,10 @@ async function explain(ctx: Context) {
 }
 
 async function chat(ctx: Context, history: { role: string; content: string }[], message: string) {
+  // The advisor runs on Groq (same system prompt and grounding context as before).
+  if (resolveProvider('chat', { GEMINI_API_KEY, GROQ_API_KEY }) === 'groq') {
+    return groqChat({ apiKey: GROQ_API_KEY, model: GROQ_MODEL, system: CHAT_SYSTEM(ctx), history, message });
+  }
   const contents = [
     ...history.slice(-10).map((m) => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.content }] })),
     { role: 'user', parts: [{ text: message }] },
@@ -295,6 +299,7 @@ Deno.serve(async (req) => {
     return json({ error: `unknown mode: ${mode}` }, 400);
   } catch (e) {
     console.error(e);
-    return json({ error: 'AI request failed', detail: String(e?.message ?? e) }, 502);
+    // MarketResearchError carries a safe diagnostic in .detail (its message is the market text).
+    return json({ error: 'AI request failed', detail: String(e?.detail ?? e?.message ?? e).slice(0, 240) }, 502);
   }
 });

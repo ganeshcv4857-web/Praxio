@@ -3,7 +3,7 @@
 // Gemini key no longer blocks Groq modes and vice versa.
 export const MODE_PROVIDERS = Object.freeze({
   explain: 'gemini',
-  chat: 'gemini',
+  chat: 'groq',
   project: 'gemini',
   evaluate: 'gemini',
   market_research: 'groq',
@@ -11,14 +11,26 @@ export const MODE_PROVIDERS = Object.freeze({
 
 export const PROVIDER_SECRET = Object.freeze({ gemini: 'GEMINI_API_KEY', groq: 'GROQ_API_KEY' });
 
+// Providers a mode may fall back to when its primary provider has no key configured.
+export const MODE_FALLBACKS = Object.freeze({});
+
+/** First configured provider for a mode (primary, then fallbacks), or null. */
+export function resolveProvider(mode, env) {
+  const primary = MODE_PROVIDERS[mode];
+  if (!primary) return null;
+  return [primary, ...(MODE_FALLBACKS[mode] ?? [])].find((p) => env[PROVIDER_SECRET[p]]) ?? null;
+}
+
 /** null if the mode can run, otherwise { status, body } for the gateway to return. */
 export function checkMode(mode, env) {
   const provider = MODE_PROVIDERS[mode];
   if (!provider) return { status: 400, body: { error: `unknown mode: ${mode}` } };
   const secret = PROVIDER_SECRET[provider];
-  if (env[secret]) return null;
-  return provider === 'groq'
+  if (resolveProvider(mode, env)) return null;
+  return mode === 'market_research'
     ? { status: 503, body: { error: 'Market intelligence temporarily unavailable.', code: 'not_configured' } }
+    : provider === 'groq'
+    ? { status: 503, body: { error: 'The AI advisor is not configured yet.', code: 'not_configured' } }
     : { status: 500, body: { error: `${secret} is not set for this function` } };
 }
 

@@ -285,7 +285,7 @@ export function isValidMarketRecord(r) {
 }
 
 // ---------------------------------------------------------------- Groq calls
-async function groq(fetchImpl, apiKey, body, timeoutMs) {
+export async function groq(fetchImpl, apiKey, body, timeoutMs) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   let res;
@@ -311,6 +311,27 @@ async function groq(fetchImpl, apiKey, body, timeoutMs) {
   const message = data?.choices?.[0]?.message;
   if (!message) throw new MarketResearchError('upstream', 'Groq returned no message');
   return message;
+}
+
+/**
+ * Plain chat completion on Groq (used as the advisor's fallback provider). No tools.
+ * history: [{ role: 'user'|'model', content }]. Returns { reply, model }.
+ */
+export async function groqChat({ apiKey, system, history = [], message, model = MARKET_CONFIG.model, fetchImpl = fetch }) {
+  const msg = await groq(fetchImpl, apiKey, {
+    model,
+    messages: [
+      { role: 'system', content: system },
+      ...history.slice(-10).map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', content: String(m.content ?? '').slice(0, 4000) })),
+      { role: 'user', content: message },
+    ],
+    reasoning_effort: 'low',
+    temperature: 0.7,
+    max_completion_tokens: 2048,
+  }, 60_000);
+  const reply = typeof msg.content === 'string' ? msg.content.trim() : '';
+  if (!reply) throw new MarketResearchError('upstream', 'Groq returned an empty reply');
+  return { reply, model };
 }
 
 /**
