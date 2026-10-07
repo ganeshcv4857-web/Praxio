@@ -45,12 +45,14 @@ export default function ProfileTab({ profile, onEdit }) {
         <ul className="space-y-4">
           {PREFERENCES.map((p) => (
             <li key={p.key} className="text-sm">
-              <div className="flex justify-between text-xs text-slate-400"><span>{p.left}</span><span>{p.right}</span></div>
+              <div className="flex justify-between text-xs text-slate-400"><span>{p.left}</span>{f[p.key] == null && <span className="text-slate-500">Not answered</span>}<span>{p.right}</span></div>
               <div className="relative mt-2 h-1.5 rounded-full bg-slate-800">
-                <span
-                  className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-400"
-                  style={{ left: `${f[p.key] ?? 50}%` }}
-                />
+                {f[p.key] != null && (
+                  <span
+                    className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-indigo-400"
+                    style={{ left: `${f[p.key]}%` }}
+                  />
+                )}
               </div>
             </li>
           ))}

@@ -159,7 +159,7 @@ export default function App() {
     setError('');
     const prof = await db.saveProfile(userId, { ...answers, onboarded_at: new Date().toISOString() });
     setProfile(prof);
-    await db.completeAssessmentSession(userId, assessment?.id ?? null, { draft: answers, quiz_answers: quiz ?? [] });
+    await db.completeAssessmentSession(userId, assessment?.id ?? null, { draft: answers, quiz_answers: quiz ?? [], assessment_version: answers.assessment_version ?? null });
     setAssessment(null);
     const list = toShortlist(rankCareers(prof));
     const rows = (await db.replaceRecommendations(userId, list)).map(fromRow);

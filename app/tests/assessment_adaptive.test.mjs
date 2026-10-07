@@ -191,3 +191,16 @@ test('legacy profiles keep their meaning: unversioned → v1, Career Fit unchang
   assert.equal(buildFeatures(legacy).pref_team, 50, 'old stored 50 is read as stored (not reinterpreted)');
   assert.ok(r.length >= 5);
 });
+
+test('drafts keep temporarily hidden answers for resuming, without writing them to the profile', () => {
+  // As Onboarding saves a draft: profile-shaped fields + meta + the raw answers.
+  const answers = { current_stage: 'school_11', school_stream: 'pcm', tried_programming: 'yes', apt_programming: 4 };
+  const hiddenNow = { ...answers, tried_programming: 'no' };
+  const out = writeAnswers(hiddenNow, planAssessment({}, hiddenNow));
+  const draft = { ...out.fields, assessment_meta: out.meta, answers: hiddenNow };
+  assert.equal(draft.answers.apt_programming, 4, 'kept in the draft in case the gate flips back');
+  assert.ok(!('apt_programming' in draft.aptitude), 'not written as profile data');
+  const resumed = draft.answers;
+  const flipped = { ...resumed, tried_programming: 'yes' };
+  assert.equal(writeAnswers(flipped, planAssessment({}, flipped)).fields.aptitude.apt_programming, 4);
+});
