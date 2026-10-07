@@ -25,6 +25,9 @@ export const DEFAULT_CATALOG = Object.freeze({ routes: ENTRY_ROUTES, sources: SO
 const EVIDENCE_ORDER = ['self_reported', 'extracted', 'document_checked'];
 const PROSPECTIVE_STAGES = ['school_10', 'school_11'];
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+// Own-property lookup: catalog keys and user-supplied ids never resolve to inherited Object members.
+const own = (obj, key) => (obj != null && typeof key === 'string' && Object.hasOwn(obj, key) ? obj[key] : undefined);
+const asList = (v) => (Array.isArray(v) ? v : []);
 
 /** Weakest evidence level among the given levels (null when none). Never upgrades. */
 export function weakestEvidence(levels) {
@@ -49,7 +52,7 @@ function dedupe(remedies) {
  * Records are never modified; validation results come from the existing validator.
  */
 function recordContext(qualification, academicRecords, validation) {
-  const matches = (academicRecords ?? []).filter((r) => r?.qualification === qualification);
+  const matches = asList(academicRecords).filter((r) => r?.qualification === qualification);
   if (!matches.length) return { qualification, record: null, issue: 'no_record' };
   if (matches.length > 1) return { qualification, record: null, issue: 'duplicate_records' };
   const record = matches[0];
@@ -98,7 +101,7 @@ function presence(ctx, subject) {
 
 // ---------------------------------------------------------------- requirements (achieved)
 function result(req, status, reason, evidence, remedies = [], extra = {}) {
-  const src = req._sources[req.source] ?? null;
+  const src = own(req._sources, req.source) ?? null;
   const sourceRef = { key: req.source, status: src?.status ?? 'unverified' };
   // Source safety: only an official source may produce a definitive failure.
   if (status === 'not_satisfied' && sourceRef.status !== 'official') {
@@ -170,13 +173,14 @@ export function evaluateRequirement(requirement, ctx, sources = SOURCES) {
       const base = all.map(entry);
       const combos = anyOf.filter((t) => marked(entry(t))).map((t) => {
         const set = [...base, entry(t)];
-        const pct = (set.reduce((a, s) => a + s.obtained, 0) / set.reduce((a, s) => a + s.max, 0)) * 100;
-        return { third: t, percentage: Math.round(pct * 100) / 100 };
-      }).sort((a, b) => b.percentage - a.percentage || a.third.localeCompare(b.third));
+        // Thresholds are compared on the exact value; `percentage` is rounded for display only.
+        const exact = (set.reduce((a, s) => a + s.obtained, 0) / set.reduce((a, s) => a + s.max, 0)) * 100;
+        return { third: t, percentage: Math.round(exact * 100) / 100, exact };
+      }).sort((a, b) => b.exact - a.exact || a.third.localeCompare(b.third));
       const best = combos[0] ?? null;
       const ev = evidenceOf(ctx, best ? [...all, best.third] : fields, { best, combinations: combos, min, relaxedMin });
-      if (best && best.percentage >= min) return result(req, 'satisfied', 'meets_minimum', ev);
-      if (best && best.percentage >= relaxedMin) return result(req, 'unknown', 'relaxation_band', ev);
+      if (best && best.exact >= min) return result(req, 'satisfied', 'meets_minimum', ev);
+      if (best && best.exact >= relaxedMin) return result(req, 'unknown', 'relaxation_band', ev);
       // A higher-scoring third subject could still exist unless every option is accounted for.
       const unmarkedThird = anyOf.some((t) => entry(t) && !marked(entry(t)));
       const openThird = anyOf.some((t) => presence(ctx, t).value === 'unknown');
@@ -198,7 +202,7 @@ export function evaluateRequirement(requirement, ctx, sources = SOURCES) {
 // ---------------------------------------------------------------- requirements (prospective)
 /** Evaluate one requirement for a student who has not yet completed the qualification. */
 export function evaluateProspectiveRequirement(req, stream, sources = SOURCES) {
-  const sourceRef = { key: req.source, status: sources[req.source]?.status ?? 'unverified' };
+  const sourceRef = { key: req.source, status: own(sources, req.source)?.status ?? 'unverified' };
   const out = (status, reason, remedies = [], evidence = {}) => ({ id: req.id, label: req.label, type: req.type, status, reason, evidence: { stream: stream ?? null, ...evidence }, remedies, source: sourceRef });
   switch (req.type) {
     case 'qualification_passed':
@@ -206,7 +210,7 @@ export function evaluateProspectiveRequirement(req, stream, sources = SOURCES) {
       return out('future', 'not_yet_evaluable');
     case 'subjects_all':
     case 'subjects_any': {
-      const implied = STREAM_SUBJECTS[stream];
+      const implied = own(STREAM_SUBJECTS, stream);
       const subjects = req.params.subjects;
       if (!implied) {
         // Undecided / commerce / humanities: the subject combination cannot be established.
@@ -235,7 +239,7 @@ function routeShell(route, catalog) {
     routeId: route.id,
     label: route.label,
     steps: route.steps.map((s) => ({ ...s })),
-    source: keys.map((k) => ({ key: k, ...catalog.sources[k] })),
+    source: keys.map((k) => ({ key: k, ...own(catalog.sources, k) })),
     assumptions: [...route.assumptions],
     catalogVersion: catalog.version,
   };
@@ -288,7 +292,7 @@ export function evaluateProspectiveRoute(route, stream, catalog = DEFAULT_CATALO
 export function eligibilityMode(profile, academicRecords) {
   const stage = userContext(profile).stage;
   if (PROSPECTIVE_STAGES.includes(stage)) return 'prospective';
-  if (stage === 'school_12' && !(academicRecords ?? []).some((r) => r?.qualification === 'class_12')) return 'prospective';
+  if (stage === 'school_12' && !asList(academicRecords).some((r) => r?.qualification === 'class_12')) return 'prospective';
   return 'achieved';
 }
 
@@ -299,19 +303,20 @@ export function eligibilityMode(profile, academicRecords) {
  */
 export function evaluateCareerEligibility({ careerId, academicRecords = [], profile = {}, catalog = DEFAULT_CATALOG, currentYear } = {}) {
   const mode = eligibilityMode(profile, academicRecords);
-  const routeIds = (catalog.careerEntry[careerId]?.routes ?? []).filter((id) => catalog.routes[id]);
+  const routeIds = [...new Set(asList(own(catalog.careerEntry, careerId)?.routes))].filter((id) => own(catalog.routes, id));
   const base = { careerId, mode, catalogVersion: catalog.version };
   if (!routeIds.length) return { ...base, status: 'no_catalogued_route', routes: [], viableRoutes: [], evidenceLevel: null };
 
   let routes;
   if (mode === 'prospective') {
     const stream = profile?.school_stream ?? null;
-    routes = routeIds.map((id) => evaluateProspectiveRoute(catalog.routes[id], stream, catalog));
+    routes = routeIds.map((id) => evaluateProspectiveRoute(own(catalog.routes, id), stream, catalog));
   } else {
-    const validation = validateAcademicRecords(academicRecords, currentYear != null ? { currentYear } : {});
+    const records = asList(academicRecords);
+    const validation = validateAcademicRecords(records, currentYear != null ? { currentYear } : {});
     const ctxs = {};
-    const ctxFor = (q) => (ctxs[q] ??= recordContext(q, academicRecords, validation));
-    routes = routeIds.map((id) => evaluateRoute(catalog.routes[id], ctxFor(catalog.routes[id].qualification), catalog));
+    const ctxFor = (q) => (ctxs[q] ??= recordContext(q, records, validation));
+    routes = routeIds.map((id) => evaluateRoute(own(catalog.routes, id), ctxFor(own(catalog.routes, id).qualification), catalog));
   }
 
   // A closed or uncertain route points at the career's other routes (data-driven, never AI).
