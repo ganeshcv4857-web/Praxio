@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Logo from './Logo.jsx';
+import usePraxioTheme from './usePraxioTheme.js';
 import './opening/opening.css';
 
 // Public "How it works" page: what Praxio is, then sign up / log in (or enter the local demo).
 // Shares the opening's theme tokens and follows the device theme unless the person chose one.
-const THEME_KEY = 'praxio-theme';
 
 const QUESTIONS = [
   ['Where am I?', 'Your current stage, in plain words, with no progress bar pretending to know more than it does.'],
@@ -35,27 +35,8 @@ const STEPS = [
   ['iv.', 'Build', 'Close gaps with projects that prove the skill.'],
 ];
 
-function useTheme() {
-  const mq = typeof window !== 'undefined' ? window.matchMedia?.('(prefers-color-scheme: dark)') : null;
-  const [sysDark, setSysDark] = useState(Boolean(mq?.matches));
-  const [theme, setTheme] = useState(() => { try { return localStorage.getItem(THEME_KEY); } catch { return null; } });
-  useEffect(() => {
-    if (!mq) return undefined;
-    const on = (e) => setSysDark(e.matches);
-    mq.addEventListener?.('change', on);
-    return () => mq.removeEventListener?.('change', on);
-  }, [mq]);
-  const dark = (theme === 'light' || theme === 'dark' ? theme : sysDark ? 'dark' : 'light') === 'dark';
-  const flip = () => {
-    const next = dark ? 'light' : 'dark';
-    try { localStorage.setItem(THEME_KEY, next); } catch { /* storage unavailable */ }
-    setTheme(next);
-  };
-  return [dark, flip];
-}
-
 export default function Landing({ onSignUp, onLogIn, onHome, demo }) {
-  const [dark, flip] = useTheme();
+  const [dark, flip] = usePraxioTheme();
   const [open, setOpen] = useState(4);
   const start = demo ? 'Enter the demo' : 'Start your assessment';
   const navLink = { padding: '0 14px', minHeight: 44, display: 'inline-flex', alignItems: 'center', color: 'var(--text-2)', textDecoration: 'none', fontSize: 15 };
