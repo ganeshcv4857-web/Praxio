@@ -8,6 +8,7 @@ globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v
 
 const SQL = readFileSync(new URL('../supabase/migrations/20261009000000_academic_evidence.sql', import.meta.url), 'utf8')
   .replace(/--.*$/gm, ''); // ignore comments
+const FLAGS_SQL = readFileSync(new URL('../supabase/migrations/20261010000000_academic_record_flags.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
 const { CLIENT_RECORD_FIELDS, clientRecordValues, QUALIFICATIONS } = await import('../src/lib/academic/schema.js');
 const demo = await import('../src/lib/demoDb.js');
 
@@ -90,4 +91,33 @@ test('demo: self-reported records stay self-reported; values stored as given', a
   await demo.deleteAcademicRecord(demo.DEMO_USER_ID, 'class_12');
   assert.equal((await demo.getAcademicEvidence()).records.length, 0);
   assert.deepEqual(QUALIFICATIONS, ['class_10', 'class_12']);
+});
+
+test('record flags migration: nullable, no default, controlled aggregation values', () => {
+  assert.match(FLAGS_SQL, /add column if not exists subjects_complete boolean,/);
+  assert.match(FLAGS_SQL, /add column if not exists aggregation text check \(aggregation in \('all_subjects', 'best_five'\)\);/);
+  assert.ok(!/default/i.test(FLAGS_SQL.split('create or replace function')[0]), 'existing rows stay NULL (unknown)');
+  assert.ok(!/update public\.academic_records/i.test(FLAGS_SQL), 'no backfill / inference');
+});
+
+test('record flags migration: trigger still guards trust fields and downgrades on flag edits', () => {
+  assert.match(FLAGS_SQL, /create or replace function public\.protect_academic_record\(\)/);
+  assert.match(FLAGS_SQL, /current_user not in \('authenticated', 'anon'\)/);
+  assert.match(FLAGS_SQL, /set search_path = ''/);
+  for (const f of TRUST_FIELDS) assert.ok(FLAGS_SQL.includes(`new.${f}`), f);
+  for (const f of ['subjects_complete', 'aggregation']) {
+    assert.ok(FLAGS_SQL.includes(`new.${f}`) && FLAGS_SQL.includes(`old.${f}`), `${f} counted as a stated value`);
+  }
+});
+
+test('flags are client-writable record values; demo stores them as given, null by default', async () => {
+  assert.ok(CLIENT_RECORD_FIELDS.includes('subjects_complete') && CLIENT_RECORD_FIELDS.includes('aggregation'));
+  assert.deepEqual(clientRecordValues({ subjects_complete: false, aggregation: 'best_five' }), { subjects_complete: false, aggregation: 'best_five' });
+  const fresh = await demo.saveSelfReportedRecord(demo.DEMO_USER_ID, 'class_10', { board: 'CBSE' });
+  assert.deepEqual([fresh.subjects_complete, fresh.aggregation], [null, null], 'unknown, not guessed');
+  const set = await demo.saveSelfReportedRecord(demo.DEMO_USER_ID, 'class_10', { subjects_complete: true, aggregation: 'all_subjects' });
+  assert.deepEqual([set.subjects_complete, set.aggregation], [true, 'all_subjects']);
+  const kept = await demo.saveSelfReportedRecord(demo.DEMO_USER_ID, 'class_10', { board: 'ICSE' });
+  assert.deepEqual([kept.subjects_complete, kept.aggregation], [true, 'all_subjects'], 'other edits keep the flags');
+  await demo.deleteAcademicRecord(demo.DEMO_USER_ID, 'class_10');
 });

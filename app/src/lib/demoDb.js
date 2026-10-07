@@ -319,7 +319,7 @@ export async function saveSelfReportedRecord(userId, qualification, values) {
   const list = (s.academicRecords ??= []);
   const prev = list.find((r) => r.qualification === qualification);
   const row = {
-    id: prev?.id ?? id(), user_id: userId, qualification, subjects: [], ...prev, ...clientRecordValues(values),
+    id: prev?.id ?? id(), user_id: userId, qualification, subjects: [], subjects_complete: null, aggregation: null, ...prev, ...clientRecordValues(values),
     // mirrors the database trigger: anything saved from the client is self-reported
     source: 'self_reported', document_id: null, extraction_output_id: null, evidence_level: 'self_reported',
     official_verification: 'not_attempted', validator_version: null, checked_at: null,
