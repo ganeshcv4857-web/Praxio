@@ -12,6 +12,7 @@
 //   stages    stage ids that see it (null = every stage)
 //   goals     primary goals that see it (null = any goal)
 //   when      optional pure predicate (answers, ctx) → boolean, for prerequisites/branching
+//   requires  question ids `when` reads (prerequisites are always ordered before dependents)
 //   required  must be answered (a real value or an explicit unknown) before the page is done
 //   unknown   how "I don't know" is stored: null (not offered) | 'absent' (left out of the module input)
 //   feeds     [{ module, use }] — the downstream consumers (must be real)
@@ -44,7 +45,7 @@ const DEGREE = ['undergraduate', 'postgraduate', 'graduate_unemployed', 'employe
 
 // Career Fit features weighted by at least one career are real consumers; int_people is not.
 const fit = (field) => [{ module: 'career_fit', use: `feature ${field.split('.').pop()}` }];
-const q = (o) => Object.freeze({ v: 1, goals: null, when: null, required: false, unknown: null, priority: 50, ...o });
+const q = (o) => Object.freeze({ v: 1, goals: null, when: null, requires: [], required: false, unknown: null, priority: 50, ...o });
 
 const QUESTIONS = [
   // ---- Module 1: stage page
