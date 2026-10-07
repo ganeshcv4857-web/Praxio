@@ -35,6 +35,9 @@ export const SUBJECTS = Object.freeze({
   physical_education: 'Physical Education',
   engineering_graphics: 'Engineering Graphics',
   statistics: 'Statistics',
+  electronics: 'Electronics',
+  agriculture: 'Agriculture',
+  entrepreneurship: 'Entrepreneurship',
 });
 
 // normalised name → [canonical id, variant | null]
@@ -85,6 +88,9 @@ const ALIASES = {
   'physical education': ['physical_education', null],
   'engineering graphics': ['engineering_graphics', null],
   'statistics': ['statistics', null],
+  'electronics': ['electronics', null],
+  'agriculture': ['agriculture', null],
+  'entrepreneurship': ['entrepreneurship', null],
 };
 
 // Names that genuinely refer to more than one subject: never resolved automatically.
