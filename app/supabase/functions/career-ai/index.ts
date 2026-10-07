@@ -2,29 +2,25 @@
 // live in Supabase function secrets and never reach the browser.
 //
 // Deployed with JWT verification on (Supabase default), so only signed-in users can call it.
-//   POST { mode: 'explain', context }                -> { explanations: { [domainId]: {...} }, model }   (Gemini)
+//   POST { mode: 'explain', context }                -> { explanations: { [domainId]: {...} }, model }   (Groq)
 //   POST { mode: 'chat', context, history, message } -> { reply, model }                                 (Groq)
-//   POST { mode: 'project', context }                -> { customisation, model }                          (Gemini)
-//   POST { mode: 'evaluate', context }               -> { evaluation, model }                             (Gemini)
+//   POST { mode: 'project', context }                -> { customisation, model }                          (Groq)
+//   POST { mode: 'evaluate', context }               -> { evaluation, model }                             (Groq)
 //   POST { mode: 'market_research', context }        -> { research }                                      (Groq)
 //     on failure: 503/502 { error: 'Market intelligence temporarily unavailable.', code }
 //
 // `context` is built client-side by src/lib/ai.js from the student's own saved profile
 // and scored shortlist (see buildContext there).
 
-import { checkMode, requireUser, resolveProvider } from './gateway.js';
-import { MARKET_CONFIG, MarketResearchError, UNAVAILABLE_MESSAGE, researchMarket } from './market.js';
+import { checkMode, requireUser } from './gateway.js';
+import { MARKET_CONFIG, MarketResearchError, UNAVAILABLE_MESSAGE, groqJson, researchMarket } from './market.js';
 import { advisorReply } from './advisor.js';
 
-const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') ?? '';
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
 const GROQ_MODEL = Deno.env.get('GROQ_MODEL') ?? MARKET_CONFIG.model;
 const MAX_BODY_BYTES = 256 * 1024;
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-// Comma-separated, tried in order. Override with `supabase secrets set GEMINI_MODELS=...`.
-const MODELS = (Deno.env.get('GEMINI_MODELS') ?? 'gemini-flash-latest,gemini-2.5-flash')
-  .split(',').map((m) => m.trim()).filter(Boolean);
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -85,50 +81,27 @@ Guidelines:
 - Keep answers focused and practical. Use short Markdown: bold labels, bullets, numbered steps for plans.
 - Do not frame this as preparing for job interviews or recruitment drives; the goal is choosing a direction.`;
 
-async function callGemini(body: Record<string, unknown>) {
-  let lastErr = 'no models configured';
-  for (const model of MODELS) {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
-        body: JSON.stringify(body),
-      },
-    );
-    if (res.ok) {
-      const data = await res.json();
-      const text = data.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('');
-      if (text) return { text, model };
-      lastErr = `${model}: empty response (${data.candidates?.[0]?.finishReason ?? 'unknown'})`;
-    } else {
-      lastErr = `${model}: HTTP ${res.status} ${await res.text()}`;
-    }
-    console.warn('Gemini attempt failed', lastErr);
-  }
-  throw new Error(lastErr);
-}
+const str = { type: 'string' };
+const strArr = { type: 'array', items: { type: 'string' } };
 
 async function explain(ctx: Context) {
   const ids = ctx.shortlist.map((r) => r.id);
-  const { text, model } = await callGemini({
-    systemInstruction: { parts: [{ text: EXPLAIN_SYSTEM }] },
-    contents: [{ role: 'user', parts: [{ text: `${profileBlock(ctx)}\n\nWrite one explanation per recommended domain.` }] }],
-    generationConfig: {
-      temperature: 0.4,
-      maxOutputTokens: 4096,
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: 'ARRAY',
-        items: {
-          type: 'OBJECT',
-          properties: {
-            domain_id: { type: 'STRING', enum: ids },
-            why: { type: 'STRING' },
-            watch_out: { type: 'STRING' },
-            grounded_on: { type: 'ARRAY', items: { type: 'STRING' } },
+  const { data, model } = await groqJson({
+    apiKey: GROQ_API_KEY,
+    model: GROQ_MODEL,
+    name: 'career_explanations',
+    system: EXPLAIN_SYSTEM,
+    user: `${profileBlock(ctx)}\n\nWrite one explanation per recommended domain.`,
+    temperature: 0.4,
+    schema: {
+      type: 'object', additionalProperties: false, required: ['explanations'],
+      properties: {
+        explanations: {
+          type: 'array',
+          items: {
+            type: 'object', additionalProperties: false, required: ['domain_id', 'why', 'watch_out', 'grounded_on'],
+            properties: { domain_id: { type: 'string', enum: ids }, why: str, watch_out: str, grounded_on: strArr },
           },
-          required: ['domain_id', 'why', 'watch_out', 'grounded_on'],
         },
       },
     },
@@ -136,7 +109,7 @@ async function explain(ctx: Context) {
 
   // Keep only explanations for requested domains, and only citations of real drivers.
   const explanations: Record<string, unknown> = {};
-  for (const item of JSON.parse(text)) {
+  for (const item of Array.isArray(data?.explanations) ? data.explanations : []) {
     const rec = ctx.shortlist.find((r) => r.id === item.domain_id);
     if (!rec) continue;
     const valid = new Set([...rec.strengths, ...rec.gaps].map((d) => d.feature));
@@ -150,21 +123,8 @@ async function explain(ctx: Context) {
 }
 
 async function chat(ctx: Context, history: { role: string; content: string }[], message: string) {
-  // The advisor runs on Groq (same system prompt and grounding context as before).
-  if (resolveProvider('chat', { GEMINI_API_KEY, GROQ_API_KEY }) === 'groq') {
-    // Guarded: off-topic messages get a polite refusal and never reach the main model.
-    return advisorReply({ apiKey: GROQ_API_KEY, model: GROQ_MODEL, system: CHAT_SYSTEM(ctx), history, message });
-  }
-  const contents = [
-    ...history.slice(-10).map((m) => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.content }] })),
-    { role: 'user', parts: [{ text: message }] },
-  ];
-  const { text, model } = await callGemini({
-    systemInstruction: { parts: [{ text: CHAT_SYSTEM(ctx) }] },
-    contents,
-    generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
-  });
-  return { reply: text, model };
+  // Guarded: off-topic messages get a polite refusal and never reach the main model.
+  return advisorReply({ apiKey: GROQ_API_KEY, model: GROQ_MODEL, system: CHAT_SYSTEM(ctx), history, message });
 }
 
 // ---------------------------------------------------------------------------
@@ -185,26 +145,21 @@ Rules:
 - Match the difficulty level. Indian college context is welcome. No hype, no emojis.`;
 
 async function customiseProject(ctx: ProjectCtx) {
-  const { text, model } = await callGemini({
-    systemInstruction: { parts: [{ text: PROJECT_SYSTEM }] },
-    contents: [{ role: 'user', parts: [{ text: JSON.stringify(ctx) }] }],
-    generationConfig: {
-      temperature: 0.6,
-      maxOutputTokens: 1024,
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: 'OBJECT',
-        properties: {
-          title: { type: 'STRING' },
-          scenario: { type: 'STRING' },
-          dataset_suggestion: { type: 'STRING' },
-          extension_challenge: { type: 'STRING' },
-        },
-        required: ['title', 'scenario'],
-      },
+  const { data, model } = await groqJson({
+    apiKey: GROQ_API_KEY,
+    model: GROQ_MODEL,
+    name: 'project_customisation',
+    system: PROJECT_SYSTEM,
+    user: JSON.stringify(ctx),
+    temperature: 0.6,
+    maxTokens: 1024,
+    schema: {
+      type: 'object', additionalProperties: false,
+      required: ['title', 'scenario', 'dataset_suggestion', 'extension_challenge'],
+      properties: { title: str, scenario: str, dataset_suggestion: str, extension_challenge: str },
     },
   });
-  return { customisation: JSON.parse(text), model };
+  return { customisation: data, model };
 }
 
 type EvalCtx = {
@@ -224,30 +179,31 @@ strengths and improvements: 2-4 short, specific, encouraging items each, citing 
 demonstrated_skills: only skills from the provided list that the evidence clearly shows.`;
 
 async function evaluateProject(ctx: EvalCtx) {
-  const { text, model } = await callGemini({
-    systemInstruction: { parts: [{ text: EVAL_SYSTEM }] },
-    contents: [{ role: 'user', parts: [{ text: JSON.stringify({ ...ctx, evidence: { ...ctx.evidence, readme: (ctx.evidence.readme ?? '').slice(0, 8000) } }) }] }],
-    generationConfig: {
-      temperature: 0.2,
-      maxOutputTokens: 1536,
-      responseMimeType: 'application/json',
-      responseSchema: {
-        type: 'OBJECT',
-        properties: {
-          concept_application: { type: 'INTEGER' },
-          correctness: { type: 'INTEGER' },
-          understanding: { type: 'INTEGER' },
-          practical_application: { type: 'INTEGER' },
-          strengths: { type: 'ARRAY', items: { type: 'STRING' } },
-          improvements: { type: 'ARRAY', items: { type: 'STRING' } },
-          demonstrated_skills: { type: 'ARRAY', items: { type: 'STRING', enum: ctx.challenge.skills } },
-          feedback: { type: 'STRING' },
-        },
-        required: ['concept_application', 'correctness', 'understanding', 'practical_application', 'strengths', 'improvements', 'demonstrated_skills'],
+  const { data, model } = await groqJson({
+    apiKey: GROQ_API_KEY,
+    model: GROQ_MODEL,
+    name: 'project_evaluation',
+    system: EVAL_SYSTEM,
+    user: JSON.stringify({ ...ctx, evidence: { ...ctx.evidence, readme: (ctx.evidence.readme ?? '').slice(0, 8000) } }),
+    temperature: 0.2,
+    maxTokens: 1536,
+    schema: {
+      type: 'object', additionalProperties: false,
+      required: ['concept_application', 'correctness', 'understanding', 'practical_application', 'strengths', 'improvements', 'demonstrated_skills', 'feedback'],
+      properties: {
+        concept_application: { type: 'integer' },
+        correctness: { type: 'integer' },
+        understanding: { type: 'integer' },
+        practical_application: { type: 'integer' },
+        strengths: strArr,
+        improvements: strArr,
+        demonstrated_skills: { type: 'array', items: { type: 'string', enum: ctx.challenge.skills } },
+        feedback: str,
       },
     },
   });
-  return { evaluation: JSON.parse(text), model };
+  // Scores are only proposals: the client validates them and computes total/pass/skills/points.
+  return { evaluation: data, model };
 }
 
 Deno.serve(async (req) => {
@@ -268,7 +224,7 @@ Deno.serve(async (req) => {
     const { mode, context, history = [], message } = JSON.parse(raw);
 
     // Each mode needs only its own provider's key.
-    const blocked = checkMode(mode, { GEMINI_API_KEY, GROQ_API_KEY });
+    const blocked = checkMode(mode, { GROQ_API_KEY });
     if (blocked) return json(blocked.body, blocked.status);
 
     if (mode === 'market_research') {

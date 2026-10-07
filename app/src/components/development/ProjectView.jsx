@@ -67,7 +67,7 @@ function EvaluationResult({ ev, submission }) {
           <p className="text-4xl font-bold tabular-nums">{ev.total_score}<span className="text-base text-slate-500"> / 100</span></p>
           <p className="text-xs text-slate-500">
             Weighted total calculated by Praxio · pass mark {PASS_SCORE} ·{' '}
-            {ev.evaluator === 'gemini' ? 'AI-assisted evaluation' : 'Automated evidence check'}
+            {ev.evaluator === 'automated-check' ? 'Automated evidence check' : 'AI-assisted evaluation'}
           </p>
         </div>
         <div className="text-right">

@@ -84,7 +84,7 @@ function demoReply(context, message) {
       list(rec.strengths),
       '**What holds it back**',
       list(rec.gaps),
-      'Connect Supabase and a Gemini key (see README) for real, conversational answers.',
+      'Connect Supabase and a Groq key (see docs/AI_GATEWAY.md) for real, conversational answers.',
     ].join('\n\n'),
   };
 }

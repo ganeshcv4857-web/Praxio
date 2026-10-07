@@ -27,7 +27,7 @@ export async function completeModuleFlow({ userId, careerId, courseId, moduleId,
     if (tailored) {
       await db.saveGeneratedOutput(userId, {
         kind: 'project_customisation', subject_type: 'project_challenge', subject_id: challenge.id,
-        subject_key: `${courseId}:${moduleId}`, content: tailored.customisation, generator: 'gemini', model: tailored.model,
+        subject_key: `${courseId}:${moduleId}`, content: tailored.customisation, generator: 'groq', model: tailored.model,
       });
       challenge = { ...challenge, customisation: tailored.customisation };
     }
@@ -97,7 +97,7 @@ export async function submitAndEvaluate({ userId, challenge, form, dev }) {
       feedback: assessed.feedback || null,
       strengths: assessed.strengths,
       improvements: assessed.improvements,
-      generator: assessed.evaluator === 'gemini' ? 'gemini' : 'deterministic',
+      generator: assessed.evaluator === 'automated-check' ? 'deterministic' : 'groq',
       model: assessed.model ?? null,
     },
     challengeStatus: ok ? 'passed' : 'needs_improvement',

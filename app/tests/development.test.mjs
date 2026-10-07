@@ -174,7 +174,7 @@ test('flow: completing a module unlocks its project but demonstrates nothing; pr
   const ch = await completeModuleFlow({ userId, careerId: 'ai-ml', courseId: 'ml-foundations', moduleId: 'ml-linreg', dev: dev0 });
   assert.equal(ch.title, 'Student Performance Predictor');
   assert.equal(ch.status, 'open');
-  assert.equal(ch.customisation, null); // demo mode: no Gemini, template wording only
+  assert.equal(ch.customisation, null); // demo mode: no AI, template wording only
   assert.equal(ch.source, undefined); // provenance lives in generated_outputs, not on the challenge
 
   const dev = await db.getDevelopment(userId); // reload == page refresh

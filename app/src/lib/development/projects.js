@@ -1,5 +1,5 @@
 // Practical projects: completing a module unlocks a project built from that module's
-// template. Gemini may only reword the scenario and suggest a dataset/extension —
+// template. The AI may only reword the scenario and suggest a dataset/extension —
 // the requirements (what proves the concept) always come from the template.
 
 import { CAREER_BY_ID } from '../careers.js';
@@ -34,7 +34,7 @@ export function buildChallenge({ careerId, courseId, moduleId, difficulty }) {
   };
 }
 
-/** Context sent to Gemini for customisation — grounded in the template. */
+/** Context sent to the AI for customisation — grounded in the template. */
 export function customisationContext(challenge) {
   const course = COURSE_BY_ID[challenge.course_id];
   const module = findModule(challenge.course_id, challenge.module_id);

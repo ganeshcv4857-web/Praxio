@@ -6,7 +6,7 @@
 //               description, prerequisites[], modules[] }
 // Module:     { id, title, skills[], project: { title, brief, requirements[] } }
 //   — every module carries the practical project it unlocks (the template that
-//     Gemini may customise, never replace).
+//     the AI may customise, never replace).
 // Programme:  { id, kind:'programme', title, ..., educationLevel, steps[] } — higher study.
 //
 // Career ids are the existing Module 1 ids (src/lib/careers.js); no second taxonomy.

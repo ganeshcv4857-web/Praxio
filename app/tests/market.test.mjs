@@ -191,16 +191,17 @@ test('evidence extraction ignores private/local URLs and model-text URLs', () =>
 });
 
 // ------------------------------------------------------------ 6. gateway routing unchanged
-test('existing modes still route to Gemini; market_research to Groq; keys checked per mode', () => {
+test('every mode routes to Groq and needs only GROQ_API_KEY', () => {
   assert.deepEqual(
-    Object.fromEntries(['explain', 'chat', 'project', 'evaluate'].map((m) => [m, MODE_PROVIDERS[m]])),
-    { explain: 'gemini', chat: 'groq', project: 'gemini', evaluate: 'gemini' }
+    Object.fromEntries(['explain', 'chat', 'project', 'evaluate', 'market_research'].map((m) => [m, MODE_PROVIDERS[m]])),
+    { explain: 'groq', chat: 'groq', project: 'groq', evaluate: 'groq', market_research: 'groq' }
   );
-  assert.equal(MODE_PROVIDERS.market_research, 'groq');
-  assert.equal(checkMode('explain', { GEMINI_API_KEY: 'g' }), null);
-  assert.equal(checkMode('market_research', { GEMINI_API_KEY: 'g' }).status, 503, 'Groq mode needs GROQ key');
-  assert.equal(checkMode('market_research', { GROQ_API_KEY: 'q' }), null, 'Groq works without Gemini key');
-  assert.equal(checkMode('explain', { GROQ_API_KEY: 'q' }).status, 500, 'Gemini modes still need Gemini key');
+  for (const m of ['explain', 'chat', 'project', 'evaluate', 'market_research']) {
+    assert.equal(checkMode(m, { GROQ_API_KEY: 'q' }), null, m + ' runs with the Groq key');
+    assert.equal(checkMode(m, { GEMINI_API_KEY: 'g' }).status, 503, m + ' does not use Gemini');
+  }
+  assert.equal(checkMode('market_research', {}).body.error, 'Market intelligence temporarily unavailable.');
+  assert.equal(checkMode('chat', {}).body.error, 'The AI advisor is not configured yet.');
   assert.equal(checkMode('nope', {}).status, 400);
 });
 
@@ -272,12 +273,9 @@ test('Groq error message is surfaced as a short diagnostic, never the key', asyn
 });
 
 // ------------------------------------------------------------ advisor chat fallback
-test('advisor chat runs on Groq only', () => {
+test('advisor chat resolves to Groq, never Gemini', () => {
   assert.equal(resolveProvider('chat', { GEMINI_API_KEY: 'g', GROQ_API_KEY: 'q' }), 'groq');
-  assert.equal(resolveProvider('chat', { GEMINI_API_KEY: 'g' }), null, 'no Gemini fallback');
-  assert.equal(checkMode('chat', { GROQ_API_KEY: 'q' }), null);
-  assert.equal(checkMode('chat', { GEMINI_API_KEY: 'g' }).status, 503);
-  for (const m of ['explain', 'project', 'evaluate']) assert.equal(resolveProvider(m, { GROQ_API_KEY: 'q' }), null, m + ' still Gemini');
+  assert.equal(resolveProvider('chat', { GEMINI_API_KEY: 'g' }), null);
 });
 
 test('groqChat sends the same system prompt + mapped history, no tools', async () => {
@@ -360,4 +358,24 @@ test('guardrail: follow-ups are classified with recent conversation', async () =
   const fake = fakeAdvisorGroq('technical');
   await ask(fake, 'what about the second one?', [{ role: 'user', content: 'alternatives to XGBoost?' }, { role: 'model', content: 'LightGBM, CatBoost…' }]);
   assert.match(fake.calls[0].messages[1].content, /alternatives to XGBoost/);
+});
+
+// ------------------------------------------------------------ strict-JSON Groq calls (explain / project / evaluate)
+test('groqJson sends a strict json_schema request and parses the reply', async () => {
+  let sent;
+  const schema = { type: 'object', additionalProperties: false, required: ['title'], properties: { title: { type: 'string' } } };
+  const fetchImpl = async (_u, init) => { sent = JSON.parse(init.body); return { ok: true, json: async () => ({ choices: [{ message: { content: '{"title":"Hostel Mess Predictor"}' } }] }) }; };
+  const r = await M.groqJson({ apiKey: 'k', system: 'S', user: 'U', name: 'project_customisation', schema, fetchImpl });
+  assert.deepEqual(r.data, { title: 'Hostel Mess Predictor' });
+  assert.equal(r.model, 'openai/gpt-oss-120b');
+  assert.deepEqual(sent.response_format, { type: 'json_schema', json_schema: { name: 'project_customisation', strict: true, schema } });
+  assert.equal(sent.tools, undefined);
+  assert.deepEqual(sent.messages.map((m) => m.role), ['system', 'user']);
+});
+
+test('groqJson: invalid JSON and HTTP errors are controlled failures', async () => {
+  const bad = async () => ({ ok: true, json: async () => ({ choices: [{ message: { content: 'not json' } }] }) });
+  await assert.rejects(M.groqJson({ apiKey: 'k', system: 'S', user: 'U', name: 'x', schema: {}, fetchImpl: bad }), (e) => e.code === 'invalid_output');
+  const down = async () => ({ ok: false, status: 503, json: async () => ({ error: { message: 'over capacity' } }) });
+  await assert.rejects(M.groqJson({ apiKey: 'k', system: 'S', user: 'U', name: 'x', schema: {}, fetchImpl: down }), (e) => e.code === 'upstream' && /over capacity/.test(e.detail));
 });

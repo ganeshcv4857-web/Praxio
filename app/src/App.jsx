@@ -26,7 +26,7 @@ import { FEASIBILITY_VERSION } from './lib/feasibility/config.js';
 //   screen:    'loading' | 'landing' | 'auth' | 'reset_password' | 'assessment' | 'app'
 //   activeTab: 'dashboard' | 'results' | 'career' | 'advisor' | 'profile' | 'feasibility' | 'development'
 // Every in-app screen requires a session (or demo mode); the dashboard is the home.
-// Without Supabase env vars the app runs in demo mode: no auth, browser storage, no Gemini.
+// Without Supabase env vars the app runs in demo mode: no auth, browser storage, no AI.
 export default function App() {
   const [screen, setScreen] = useState('loading');
   const [authTab, setAuthTab] = useState('login');
@@ -352,7 +352,7 @@ function DemoBanner() {
   return (
     <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-200">
       Demo mode: no Supabase configured. Data stays in this browser and explanations come from the
-      score breakdown instead of Gemini. &ldquo;Log out&rdquo; resets the demo.
+      score breakdown instead of the AI. &ldquo;Log out&rdquo; resets the demo.
     </div>
   );
 }

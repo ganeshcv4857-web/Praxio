@@ -1,5 +1,5 @@
 // Project evaluation: validation, weighted scoring, demonstrated skills and rewards.
-// Whoever proposes criterion scores (Gemini or the automated check), the final total,
+// Whoever proposes criterion scores (Groq or the automated check), the final total,
 // pass/fail, demonstrated skills and points are always computed here.
 
 import {

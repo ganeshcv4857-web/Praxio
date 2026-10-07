@@ -314,6 +314,25 @@ export async function groq(fetchImpl, apiKey, body, timeoutMs) {
 }
 
 /**
+ * Strict structured-output call on Groq (no tools). Returns { data, model }.
+ * Throws MarketResearchError('invalid_output') if the reply isn't valid JSON.
+ */
+export async function groqJson({ apiKey, system, user, name, schema, model = MARKET_CONFIG.model, temperature = 0.3, maxTokens = 4096, timeoutMs = 60_000, fetchImpl = fetch }) {
+  const msg = await groq(fetchImpl, apiKey, {
+    model,
+    messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+    response_format: { type: 'json_schema', json_schema: { name, strict: true, schema } },
+    temperature,
+    max_completion_tokens: maxTokens,
+  }, timeoutMs);
+  try {
+    return { data: JSON.parse(msg.content ?? ''), model };
+  } catch {
+    throw new MarketResearchError('invalid_output', `${name}: model returned invalid JSON`);
+  }
+}
+
+/**
  * Plain chat completion on Groq (used as the advisor's fallback provider). No tools.
  * history: [{ role: 'user'|'model', content }]. Returns { reply, model }.
  */

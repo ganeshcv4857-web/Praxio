@@ -130,7 +130,7 @@ export async function saveExplanations(userId, recs, explanations, model) {
       subject_id: r.id,
       subject_key: r.domainId,
       content: explanations[r.domainId],
-      generator: 'gemini',
+      generator: 'groq',
       model,
       context_version: CATALOG_VERSION,
     }));

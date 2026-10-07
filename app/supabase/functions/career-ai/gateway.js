@@ -1,15 +1,14 @@
 // Which provider (and therefore which secret) each career-ai mode needs.
-// Plain JS so it can be unit-tested; the gateway checks keys per mode, so a missing
-// Gemini key no longer blocks Groq modes and vice versa.
+// All modes run on Groq; the map stays so a provider can be swapped per mode later.
 export const MODE_PROVIDERS = Object.freeze({
-  explain: 'gemini',
+  explain: 'groq',
   chat: 'groq',
-  project: 'gemini',
-  evaluate: 'gemini',
+  project: 'groq',
+  evaluate: 'groq',
   market_research: 'groq',
 });
 
-export const PROVIDER_SECRET = Object.freeze({ gemini: 'GEMINI_API_KEY', groq: 'GROQ_API_KEY' });
+export const PROVIDER_SECRET = Object.freeze({ groq: 'GROQ_API_KEY' });
 
 // Providers a mode may fall back to when its primary provider has no key configured.
 export const MODE_FALLBACKS = Object.freeze({});
@@ -30,7 +29,7 @@ export function checkMode(mode, env) {
   return mode === 'market_research'
     ? { status: 503, body: { error: 'Market intelligence temporarily unavailable.', code: 'not_configured' } }
     : provider === 'groq'
-    ? { status: 503, body: { error: 'The AI advisor is not configured yet.', code: 'not_configured' } }
+    ? { status: 503, body: { error: mode === 'chat' ? 'The AI advisor is not configured yet.' : 'AI is not configured yet.', code: 'not_configured' } }
     : { status: 500, body: { error: `${secret} is not set for this function` } };
 }
 

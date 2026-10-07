@@ -1,5 +1,5 @@
 // Module 3 AI assistance + GitHub evidence. Every call has a deterministic fallback,
-// so the full learn → build → evaluate loop works without Gemini (e.g. demo mode).
+// so the full learn → build → evaluate loop works without the AI layer (e.g. demo mode).
 import { invoke } from '../ai.js';
 import { findModule } from './catalog.js';
 import { customisationContext } from './projects.js';
@@ -52,7 +52,7 @@ export async function fetchRepoEvidence(githubUrl) {
 }
 
 /**
- * Propose criterion scores for a submission. Gemini if available (validated here),
+ * Propose criterion scores for a submission. Groq if available (validated here),
  * otherwise the automated evidence check. Never returns a total — the caller computes it.
  */
 export async function assessSubmission(challenge, submission, evidence) {
@@ -75,7 +75,7 @@ export async function assessSubmission(challenge, submission, evidence) {
       improvements: list(evaluation.improvements),
       demonstrated_skills: list(evaluation.demonstrated_skills),
       feedback: typeof evaluation.feedback === 'string' ? evaluation.feedback.slice(0, 1000) : '',
-      evaluator: 'gemini',
+      evaluator: 'groq',
       model,
       evidence,
     };

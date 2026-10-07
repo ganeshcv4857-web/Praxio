@@ -141,7 +141,7 @@ export async function saveExplanations(userId, recs, explanations, model) {
     if (!explanations[r.domainId] || !r.id) continue;
     generatedList(s).push({
       id: id(), user_id: userId, kind: 'career_explanation', subject_type: 'recommendation', subject_id: r.id,
-      subject_key: r.domainId, content: explanations[r.domainId], generator: 'gemini', model, sources: [],
+      subject_key: r.domainId, content: explanations[r.domainId], generator: 'groq', model, sources: [],
       context_version: CATALOG_VERSION, created_at: now(),
     });
   }
