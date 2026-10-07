@@ -53,7 +53,12 @@ export function buildContext(profile, shortlist) {
 export async function invoke(body) {
   if (!supabase) throw new Error('Demo mode: AI service not configured');
   const { data, error } = await supabase.functions.invoke('career-ai', { body });
-  if (error) throw error;
+  if (error) {
+    // Non-2xx: surface the gateway's controlled error body instead of a generic message.
+    const payload = await error.context?.json?.().catch(() => null);
+    if (payload?.error) throw Object.assign(new Error(payload.detail ? `${payload.error} (${payload.detail})` : payload.error), { code: payload.code });
+    throw error;
+  }
   if (data?.error) throw new Error(data.detail || data.error);
   return data;
 }

@@ -12,13 +12,15 @@
 // `context` is built client-side by src/lib/ai.js from the student's own saved profile
 // and scored shortlist (see buildContext there).
 
-import { checkMode } from './gateway.js';
+import { checkMode, requireUser } from './gateway.js';
 import { MARKET_CONFIG, MarketResearchError, UNAVAILABLE_MESSAGE, researchMarket } from './market.js';
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') ?? '';
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
 const GROQ_MODEL = Deno.env.get('GROQ_MODEL') ?? MARKET_CONFIG.model;
 const MAX_BODY_BYTES = 256 * 1024;
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 // Comma-separated, tried in order. Override with `supabase secrets set GEMINI_MODELS=...`.
 const MODELS = (Deno.env.get('GEMINI_MODELS') ?? 'gemini-flash-latest,gemini-2.5-flash')
   .split(',').map((m) => m.trim()).filter(Boolean);
@@ -246,6 +248,13 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
   if (Number(req.headers.get('content-length') ?? 0) > MAX_BODY_BYTES) return json({ error: 'request too large' }, 413);
 
+  // Only signed-in Praxio users (not the public publishable/anon key) may use the gateway.
+  const userId = await requireUser(req.headers.get('Authorization'), {
+    supabaseUrl: SUPABASE_URL,
+    apiKey: SUPABASE_ANON_KEY || req.headers.get('apikey') || '',
+  });
+  if (!userId) return json({ error: 'Sign in required' }, 401);
+
   try {
     const raw = await req.text();
     if (raw.length > MAX_BODY_BYTES) return json({ error: 'request too large' }, 413);
@@ -263,7 +272,9 @@ Deno.serve(async (req) => {
         const code = e instanceof MarketResearchError ? e.code : 'internal';
         console.warn('market_research failed:', code, e instanceof MarketResearchError ? e.detail : '');
         const status = code === 'bad_request' ? 400 : code === 'not_configured' ? 503 : 502;
-        return json({ error: UNAVAILABLE_MESSAGE, code }, status);
+        // Short diagnostic only (e.g. 'Groq HTTP 400: …'); no key, prompt or student data.
+        const detail = e instanceof MarketResearchError && code !== 'bad_request' ? String(e.detail ?? '').slice(0, 240) : undefined;
+        return json({ error: UNAVAILABLE_MESSAGE, code, detail }, status);
       }
     }
 

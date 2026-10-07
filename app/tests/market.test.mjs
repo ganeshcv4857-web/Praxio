@@ -10,7 +10,7 @@ globalThis.localStorage = {
 console.warn = () => {};
 
 const M = await import('../supabase/functions/career-ai/market.js');
-const { MODE_PROVIDERS, checkMode } = await import('../supabase/functions/career-ai/gateway.js');
+const { MODE_PROVIDERS, checkMode, requireUser } = await import('../supabase/functions/career-ai/gateway.js');
 const { getMarketIntelligence, buildMarketContext } = await import('../src/lib/marketIntelligence.js');
 const { DEMO_USER_ID, resetDemo, readDemoSnapshot } = await import('../src/lib/demoDb.js');
 
@@ -245,4 +245,28 @@ test('client: demo mode (no Supabase) is a clean "unavailable"', async () => {
   const r = await getMarketIntelligence({ userId: DEMO_USER_ID, careerId: 'vlsi', context: {}, now: NOW });
   assert.equal(r.status, 'unavailable');
   assert.match(r.reason, /Demo mode/);
+});
+
+// ------------------------------------------------------------ gateway auth
+test('gateway requires a real signed-in user, not just the public key', async () => {
+  const seen = [];
+  const authFetch = async (url, init) => {
+    seen.push({ url, init });
+    const token = init.headers.Authorization.slice(7);
+    return token === 'user-jwt'
+      ? { ok: true, json: async () => ({ id: 'user-123' }) }
+      : { ok: false, status: 401, json: async () => ({ msg: 'invalid JWT' }) };
+  };
+  const opts = { supabaseUrl: 'https://p.supabase.co', apiKey: 'sb_publishable_x', fetchImpl: authFetch };
+  assert.equal(await requireUser('Bearer user-jwt', opts), 'user-123');
+  assert.equal(seen[0].url, 'https://p.supabase.co/auth/v1/user');
+  assert.equal(await requireUser('Bearer sb_publishable_x', opts), null, 'publishable key is not a user');
+  assert.equal(await requireUser(null, opts), null);
+  assert.equal(await requireUser('Basic abc', opts), null);
+  assert.equal(await requireUser('Bearer user-jwt', { ...opts, fetchImpl: async () => { throw new Error('down'); } }), null);
+});
+
+test('Groq error message is surfaced as a short diagnostic, never the key', async () => {
+  const fetchImpl = async () => ({ ok: false, status: 400, json: async () => ({ error: { message: 'tool_choice is invalid for this model' } }) });
+  await assert.rejects(run({ fetchImpl }), (e) => e.code === 'upstream' && e.detail === 'Groq HTTP 400: tool_choice is invalid for this model' && !e.detail.includes('test-key'));
 });

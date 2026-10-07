@@ -21,3 +21,21 @@ export function checkMode(mode, env) {
     ? { status: 503, body: { error: 'Market intelligence temporarily unavailable.', code: 'not_configured' } }
     : { status: 500, body: { error: `${secret} is not set for this function` } };
 }
+
+/**
+ * Require a real signed-in user. Supabase's verify_jwt also accepts the project's public
+ * publishable/anon key, which anyone visiting the site has, so the gateway asks Supabase
+ * Auth who the bearer token belongs to. Returns the user id, or null to reject (401).
+ */
+export async function requireUser(authorization, { supabaseUrl, apiKey, fetchImpl = fetch }) {
+  const token = /^Bearer\s+(.+)$/i.exec(authorization ?? '')?.[1];
+  if (!token || !supabaseUrl || !apiKey) return null;
+  try {
+    const res = await fetchImpl(`${supabaseUrl}/auth/v1/user`, { headers: { Authorization: `Bearer ${token}`, apikey: apiKey } });
+    if (!res.ok) return null;
+    const user = await res.json();
+    return typeof user?.id === 'string' && user.id ? user.id : null;
+  } catch {
+    return null;
+  }
+}

@@ -301,7 +301,12 @@ async function groq(fetchImpl, apiKey, body, timeoutMs) {
   } finally {
     clearTimeout(timer);
   }
-  if (!res.ok) throw new MarketResearchError('upstream', `Groq HTTP ${res.status}`);
+  if (!res.ok) {
+    // Groq's error message (e.g. invalid parameter) helps diagnose; it never contains our key.
+    const err = await res.json().catch(() => null);
+    const msg = typeof err?.error?.message === 'string' ? `: ${err.error.message.slice(0, 200)}` : '';
+    throw new MarketResearchError('upstream', `Groq HTTP ${res.status}${msg}`);
+  }
   const data = await res.json().catch(() => null);
   const message = data?.choices?.[0]?.message;
   if (!message) throw new MarketResearchError('upstream', 'Groq returned no message');
