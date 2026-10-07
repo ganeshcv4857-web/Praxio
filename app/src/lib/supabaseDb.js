@@ -8,6 +8,7 @@
 import { supabase } from './supabase.js';
 import { CATALOG_VERSION } from './careers.js';
 import { notifySessionExpired } from './session.js';
+import { QUALIFICATIONS, clientRecordValues } from './academic/schema.js';
 
 // PostgREST / GoTrue signals that the JWT is no longer valid.
 const isAuthError = (e) =>
@@ -325,4 +326,32 @@ export async function recordEvaluation(userId, { evaluation, narrative, challeng
   }
   if (reward) unwrap(await supabase.from('reward_transactions').insert({ user_id: userId, ...reward }));
   return { ...ev, ...(narrative ? { feedback: narrative.feedback, strengths: narrative.strengths, improvements: narrative.improvements } : {}) };
+}
+
+// ---- Academic evidence ----------------------------------------------------
+
+/** The user's uploaded marksheets and confirmed academic records. */
+export async function getAcademicEvidence(userId) {
+  const [documents, records] = await Promise.all([
+    supabase.from('academic_documents').select('*').eq('user_id', userId).order('uploaded_at', { ascending: false }),
+    supabase.from('academic_records').select('*').eq('user_id', userId).order('qualification'),
+  ]);
+  return { documents: unwrap(documents), records: unwrap(records) };
+}
+
+/**
+ * Save a self-reported record (manual entry). Only client-writable fields are sent; the
+ * database keeps it self_reported and downgrades any earlier checked record on edit.
+ */
+export async function saveSelfReportedRecord(userId, qualification, values) {
+  if (!QUALIFICATIONS.includes(qualification)) throw new Error(`Unknown qualification ${qualification}`);
+  return unwrap(
+    await supabase.from('academic_records')
+      .upsert({ user_id: userId, qualification, ...clientRecordValues(values) }, { onConflict: 'user_id,qualification' })
+      .select().single()
+  );
+}
+
+export async function deleteAcademicRecord(userId, qualification) {
+  unwrap(await supabase.from('academic_records').delete().eq('user_id', userId).eq('qualification', qualification));
 }

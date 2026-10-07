@@ -1,6 +1,7 @@
 // Demo mode (no Supabase configured): same API as supabaseDb.js, backed by localStorage.
 // Single local user; for previewing the UI only.
 import { CATALOG_VERSION } from './careers.js';
+import { QUALIFICATIONS, clientRecordValues } from './academic/schema.js';
 
 export const DEMO_USER_ID = 'demo-user';
 const KEY = 'app_demo_db_v1';
@@ -303,4 +304,34 @@ export async function recordEvaluation(userId, { evaluation, narrative, challeng
   }
   save(s);
   return { ...ev, ...(narrative ? { feedback: narrative.feedback, strengths: narrative.strengths, improvements: narrative.improvements } : {}) };
+}
+
+// ---- Academic evidence ----------------------------------------------------
+// Demo mode has no Storage: documents are never uploaded, records are self-reported only.
+
+export async function getAcademicEvidence() {
+  return { documents: [], records: load().academicRecords ?? [] };
+}
+
+export async function saveSelfReportedRecord(userId, qualification, values) {
+  if (!QUALIFICATIONS.includes(qualification)) throw new Error(`Unknown qualification ${qualification}`);
+  const s = load();
+  const list = (s.academicRecords ??= []);
+  const prev = list.find((r) => r.qualification === qualification);
+  const row = {
+    id: prev?.id ?? id(), user_id: userId, qualification, subjects: [], ...prev, ...clientRecordValues(values),
+    // mirrors the database trigger: anything saved from the client is self-reported
+    source: 'self_reported', document_id: null, extraction_output_id: null, evidence_level: 'self_reported',
+    official_verification: 'not_attempted', validator_version: null, checked_at: null,
+    created_at: prev?.created_at ?? now(), updated_at: now(),
+  };
+  s.academicRecords = [...list.filter((r) => r.qualification !== qualification), row];
+  save(s);
+  return row;
+}
+
+export async function deleteAcademicRecord(_userId, qualification) {
+  const s = load();
+  s.academicRecords = (s.academicRecords ?? []).filter((r) => r.qualification !== qualification);
+  save(s);
 }

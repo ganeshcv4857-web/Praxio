@@ -30,3 +30,6 @@ export const completeModule = (...a) => impl.completeModule(...a);
 export const createChallenge = (...a) => impl.createChallenge(...a);
 export const submitProject = (...a) => impl.submitProject(...a);
 export const recordEvaluation = (...a) => impl.recordEvaluation(...a);
+export const getAcademicEvidence = (...a) => impl.getAcademicEvidence(...a);
+export const saveSelfReportedRecord = (...a) => impl.saveSelfReportedRecord(...a);
+export const deleteAcademicRecord = (...a) => impl.deleteAcademicRecord(...a);
