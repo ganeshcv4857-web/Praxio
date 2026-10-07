@@ -9,3 +9,4 @@ dist/
 *.timestamp-*.mjs
 praxio_setup.sql
 app/supabase/.temp/
+supabase/.temp/
