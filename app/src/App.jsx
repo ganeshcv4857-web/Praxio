@@ -19,13 +19,14 @@ import ProfileTab from './components/ProfileTab.jsx';
 import Feasibility from './components/feasibility/Feasibility.jsx';
 import Development from './components/development/Development.jsx';
 import MarketIntelligence from './components/market/MarketIntelligence.jsx';
+import Alignment from './components/alignment/Alignment.jsx';
 import { evaluateAll } from './lib/feasibility/scoring.js';
 import { pickInputs as pickFeasibilityInputs } from './components/feasibility/FeasibilityWizard.jsx';
 import { FEASIBILITY_VERSION } from './lib/feasibility/config.js';
 
 // Navigation (state-based, as before):
 //   screen:    'loading' | 'landing' | 'auth' | 'reset_password' | 'assessment' | 'app'
-//   activeTab: 'dashboard' | 'results' | 'career' | 'advisor' | 'profile' | 'feasibility' | 'development' | 'market'
+//   activeTab: 'dashboard' | 'results' | 'career' | 'advisor' | 'profile' | 'feasibility' | 'development' | 'market' | 'alignment'
 // Every in-app screen requires a session (or demo mode); the dashboard is the home.
 // Without Supabase env vars the app runs in demo mode: no auth, browser storage, no AI.
 export default function App() {
@@ -344,6 +345,16 @@ export default function App() {
       )}
       {!needsAssessment && activeTab === 'market' && (
         <MarketIntelligence
+          key={navCount}
+          userId={userId}
+          profile={profile}
+          recs={recs}
+          feasibilityRow={feasibility}
+          onGoFeasibility={() => setActiveTab('feasibility')}
+        />
+      )}
+      {!needsAssessment && activeTab === 'alignment' && (
+        <Alignment
           key={navCount}
           userId={userId}
           profile={profile}

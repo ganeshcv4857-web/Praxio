@@ -8,6 +8,7 @@ const NAV = [
   { id: 'feasibility', label: 'Feasibility', icon: '⚖' },
   { id: 'development', label: 'Learning path', icon: '▲' },
   { id: 'market', label: 'Market', icon: '◆' },
+  { id: 'alignment', label: 'Family alignment', icon: '❖' },
   { id: 'advisor', label: 'Ask the advisor', icon: '✦' },
   { id: 'profile', label: 'My profile', icon: '◐' },
 ];

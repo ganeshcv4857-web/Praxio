@@ -7,6 +7,7 @@
 //   POST { mode: 'project', context }                -> { customisation, model }                          (Groq)
 //   POST { mode: 'evaluate', context }               -> { evaluation, model }                             (Groq)
 //   POST { mode: 'market_research', context }        -> { research }                                      (Groq)
+//   POST { mode: 'alignment', context }              -> { narrative, model }   explanations only, no scores (Groq)
 //     on failure: 503/502 { error: 'Market intelligence temporarily unavailable.', code }
 //
 // `context` is built client-side by src/lib/ai.js from the student's own saved profile
@@ -15,6 +16,7 @@
 import { checkMode, requireUser } from './gateway.js';
 import { MARKET_CONFIG, MarketResearchError, UNAVAILABLE_MESSAGE, groqJson, researchMarket } from './market.js';
 import { advisorReply } from './advisor.js';
+import { ALIGNMENT_SYSTEM, narrativeSchema, validateNarrative } from './alignment.js';
 
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
 const GROQ_MODEL = Deno.env.get('GROQ_MODEL') ?? MARKET_CONFIG.model;
@@ -226,6 +228,18 @@ Deno.serve(async (req) => {
     // Each mode needs only its own provider's key.
     const blocked = checkMode(mode, { GROQ_API_KEY });
     if (blocked) return json(blocked.body, blocked.status);
+
+    if (mode === 'alignment') {
+      if (!context?.career || !Array.isArray(context?.paths) || !context.paths.length || !Array.isArray(context?.differences)) {
+        return json({ error: 'alignment context is required' }, 400);
+      }
+      const { data, model } = await groqJson({
+        apiKey: GROQ_API_KEY, model: GROQ_MODEL, name: 'alignment_narrative',
+        system: ALIGNMENT_SYSTEM, user: JSON.stringify(context), schema: narrativeSchema(context),
+        temperature: 0.5, maxTokens: 2048,
+      });
+      return json({ narrative: validateNarrative(data, context), model });
+    }
 
     if (mode === 'market_research') {
       try {

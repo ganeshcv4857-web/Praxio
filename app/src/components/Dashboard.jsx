@@ -72,6 +72,7 @@ export default function Dashboard({ userId, profile, recs, feasibilityRow, asses
     { n: 2, title: 'Career feasibility', status: m2Done ? 'done' : m1Done ? (feasibilityRow ? 'active' : 'ready') : 'locked', detail: m2Done ? `${Object.values(feas).filter((f) => f.category === 'high').length} highly feasible` : m1Done ? 'Family & financial check' : 'After Module 1', tab: m1Done ? 'feasibility' : null },
     { n: 3, title: 'Career development', status: !m2Done ? 'locked' : modulesTotal && modulesDone === modulesTotal ? 'done' : m3Started ? 'active' : 'ready', detail: !m2Done ? 'After Module 2' : m3Started ? `${modulesDone}/${modulesTotal} modules · ${progress.points} pts` : 'Learning path ready', tab: m2Done ? 'development' : null },
     { n: 4, title: 'Market intelligence', status: m1Done ? 'ready' : 'locked', detail: m1Done ? 'Demand, salaries & your skill gaps' : 'After Module 1', tab: m1Done ? 'market' : null },
+    { n: 5, title: 'Family alignment', status: m2Done ? 'ready' : 'locked', detail: m2Done ? 'Paths that work for you and your family' : 'After Module 2', tab: m2Done ? 'alignment' : null },
   ];
 
   const isNew = !m1Done && !m1Active;
@@ -110,7 +111,7 @@ export default function Dashboard({ userId, profile, recs, feasibilityRow, asses
 
       <section>
         <h2 className="mb-3 text-lg font-semibold">Your journey</h2>
-        <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {modules.map((m) => (
             <li key={m.n} className={`card flex flex-col ${m.status === 'locked' || m.status === 'soon' ? 'opacity-60' : ''}`}>
               <div className="flex items-center justify-between gap-2">
