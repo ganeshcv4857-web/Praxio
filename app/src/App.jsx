@@ -224,7 +224,7 @@ export default function App() {
   if (screen === 'landing') {
     const signUp = () => (isConfigured ? (setAuthTab('signup'), setScreen('auth')) : loadUser(DEMO_USER_ID));
     const logIn = () => { setAuthTab('login'); setScreen('auth'); };
-    if (aboutOpen) return <Landing demo={!isConfigured} onSignUp={signUp} onLogIn={logIn} />;
+    if (aboutOpen) return <Landing demo={!isConfigured} onSignUp={signUp} onLogIn={logIn} onHome={() => setAboutOpen(false)} />;
     return (
       <Suspense fallback={<div className="min-h-screen bg-[#F4F2EE] dark:bg-[#0E0F12]" />}>
         <Opening

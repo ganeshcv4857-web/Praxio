@@ -1,4 +1,34 @@
-/* Cinematic opening. Self-contained theme tokens: light by default, `.dark` for dark. */
+/* Praxio public pages (the opening `.pxo`, the landing `.pxl`).
+   Shared theme tokens: light by default, `.dark` for dark. */
+.pxl {
+  --bg: #F4F2EE; --surface: #FFFFFF; --surface-2: #ECE9E3; --text: #141519; --text-2: #55575E; --text-3: #8A8C92;
+  --line: rgba(20,21,25,.10); --line-2: rgba(20,21,25,.18);
+  --accent: #2F54EB; --accent-soft: rgba(47,84,235,.10); --on-accent: #FFFFFF; --success: #1F8A5B; --warning: #B86E00;
+  --shadow: 0 1px 2px rgba(20,21,25,.05), 0 18px 50px -18px rgba(20,21,25,.18);
+  min-height: 100vh; font-family: 'Geist', system-ui, sans-serif; background: var(--bg); color: var(--text);
+  transition: background .6s ease, color .6s ease;
+}
+.pxl.dark {
+  --bg: #0E0F12; --surface: #17181C; --surface-2: #202126; --text: #F2F1EE; --text-2: #A6A7AD; --text-3: #72737A;
+  --line: rgba(255,255,255,.08); --line-2: rgba(255,255,255,.16);
+  --accent: #8FA6FF; --accent-soft: rgba(143,166,255,.13); --on-accent: #0E0F12; --success: #5BC79A; --warning: #E2A84B;
+  --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 24px 60px -20px rgba(0,0,0,.7);
+}
+.pxl button { font-family: inherit; cursor: pointer; }
+.pxl a { color: var(--accent); }
+.pxl a:hover { color: var(--text); }
+.pxl a:focus-visible, .pxl button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.pxl .ser { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; letter-spacing: -.01em; }
+.pxl .disp { font-weight: 400; letter-spacing: -.045em; line-height: 1.02; }
+.pxl .pill { transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
+.pxl .pill:hover { transform: translateY(-3px) scale(1.03); }
+.pxl .row:hover .rowtitle { color: var(--accent); }
+@keyframes pxl-orbit { to { transform: rotate(360deg); } }
+.pxl .orbit { animation: pxl-orbit 60s linear infinite; }
+.pxl .orbit-r { animation: pxl-orbit 60s linear infinite reverse; }
+.pxl .halo { animation: pxo-halo 2.4s cubic-bezier(.2,.7,.3,1) infinite; }
+@media (prefers-reduced-motion: reduce) { .pxl .orbit, .pxl .orbit-r, .pxl .halo { animation: none; } }
+
 .pxo {
   --bg: #F4F2EE; --surface: #FFFFFF; --surface-2: #ECE9E3; --text: #141519; --text-2: #55575E; --text-3: #8A8C92;
   --line: rgba(20,21,25,.10); --line-2: rgba(20,21,25,.18);
