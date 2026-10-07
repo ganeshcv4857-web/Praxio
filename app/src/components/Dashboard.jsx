@@ -8,6 +8,7 @@ import { deriveProgress, pathwayStages } from '../lib/development/learning.js';
 import { COURSE_BY_ID } from '../lib/development/catalog.js';
 import { ASSESSMENT_STEPS } from './Onboarding.jsx';
 import ScoreBar from './ScoreBar.jsx';
+import { userContext, labelOf } from '../lib/userContext.js';
 
 // The authenticated user's home. Everything shown is derived from persisted data,
 // so it is the same after a refresh, a new browser or a new device.
@@ -26,6 +27,8 @@ function StatusPill({ status }) {
 
 export default function Dashboard({ userId, profile, recs, feasibilityRow, assessmentSession, onStartAssessment, go, importOffer }) {
   const inputs = useMemo(() => pickInputs(feasibilityRow), [feasibilityRow]);
+  // Stage from the saved profile, or from an in-progress assessment draft.
+  const ctx = userContext({ ...profile, ...(assessmentSession?.draft ?? {}), current_stage: profile?.current_stage ?? assessmentSession?.draft?.current_stage });
   const m1Done = Boolean(profile?.onboarded_at) && recs.length > 0;
   const m1Active = Boolean(assessmentSession);
   const m2Done = m1Done && isComplete(inputs);
@@ -96,7 +99,9 @@ export default function Dashboard({ userId, profile, recs, feasibilityRow, asses
         <>
           <div>
             <h1 className="text-2xl font-bold">Welcome back{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}</h1>
-            <p className="text-sm text-slate-400">Here&rsquo;s where you are in Praxio.</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-300">{ctx.stageLabel}{ctx.goal ? ` · ${labelOf.goal(ctx.goal)}` : ''}</p>
+            <p className="text-lg font-semibold text-slate-200">{ctx.headline}</p>
+            <p className="text-sm text-slate-400">Praxio is focusing on {ctx.focus}.</p>
           </div>
           <section className="card flex flex-wrap items-center justify-between gap-4 border-indigo-500/40 bg-indigo-500/5">
             <div className="max-w-xl">

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   BUDGET_BANDS, EDUCATION_OPTIONS, FAMILY_PRIORITIES, INCOME_BANDS, LOAN_OPTIONS, LOCATION_OPTIONS,
-  RELOCATION_OPTIONS, RISK_LEVELS,
+  PRIMARY_FUNDERS, RELOCATION_OPTIONS, RISK_LEVELS, SCHOLARSHIP_OPTIONS,
 } from '../../lib/feasibility/config.js';
 
 const STEPS = ['Family & finances', 'Education & location', 'Family priorities'];
@@ -53,6 +53,8 @@ const EMPTY = {
   location_preference: '',
   relocation: '',
   family_priorities: [],
+  primary_funder: 'family',      // who pays upfront (defaults keep older rows valid)
+  scholarship_interest: 'no',
 };
 
 export default function FeasibilityWizard({ initial, careerCount, onSubmit, onCancel }) {
@@ -104,11 +106,17 @@ export default function FeasibilityWizard({ initial, careerCount, onSubmit, onCa
             <Question title="Annual family income">
               <Choice options={INCOME_BANDS} value={form.income_band} onChange={set('income_band')} />
             </Question>
-            <Question title="How much can your family reasonably spend on your education?" hint="Total for the whole path, including any further study.">
+            <Question title="Who will mainly pay for your education upfront?">
+              <Choice options={PRIMARY_FUNDERS} value={form.primary_funder} onChange={set('primary_funder')} />
+            </Question>
+            <Question title="How much can be spent on your education upfront?" hint="From whoever pays, without loans. Total for the whole path, including any further study.">
               <Choice options={BUDGET_BANDS} value={form.education_budget} onChange={set('education_budget')} />
             </Question>
             <Question title="Would you take an education loan?">
               <Choice options={LOAN_OPTIONS} value={form.loan_willingness} onChange={set('loan_willingness')} />
+            </Question>
+            <Question title="Will you apply for scholarships?" hint="Scholarships are never counted as guaranteed money.">
+              <Choice options={SCHOLARSHIP_OPTIONS} value={form.scholarship_interest} onChange={set('scholarship_interest')} />
             </Question>
             <Question title="Your family's comfort with financial risk" hint="e.g. a longer, costlier path or less predictable income early on.">
               <Choice options={RISK_LEVELS} value={form.risk_tolerance} onChange={set('risk_tolerance')} />

@@ -302,6 +302,7 @@ export default function App() {
       {!needsAssessment && activeTab === 'results' && (
         <Results
           recs={recs}
+          profile={profile}
           explaining={explaining}
           onOpen={openCareer}
           onAsk={askAbout}

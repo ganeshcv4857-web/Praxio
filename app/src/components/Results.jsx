@@ -1,7 +1,10 @@
 import { CAREER_BY_ID } from '../lib/careers.js';
 import ScoreBar from './ScoreBar.jsx';
+import { userContext } from '../lib/userContext.js';
+import { stageGuidance } from '../lib/stageGuidance.js';
 
-export default function Results({ recs, explaining, onOpen, onAsk, hasFeasibility, onCheckFeasibility }) {
+export default function Results({ recs, profile, explaining, onOpen, onAsk, hasFeasibility, onCheckFeasibility }) {
+  const ctx = userContext(profile);
   if (!recs.length) return <p className="text-slate-400">No matches yet. Complete your profile first.</p>;
 
   return (
@@ -46,6 +49,15 @@ export default function Results({ recs, explaining, onOpen, onAsk, hasFeasibilit
                   <p className="mt-3 text-sm text-slate-300">
                     {r.explanation?.why ?? (explaining ? <span className="text-slate-500">Writing your explanation…</span> : c.summary)}
                   </p>
+                  {(() => {
+                    const g = stageGuidance({ careerId: r.domainId, ctx });
+                    return (
+                      <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-300">Next for you · {ctx.stageLabel}</p>
+                        <ul className="mt-1 space-y-0.5 text-sm text-slate-300">{g.steps.map((st) => <li key={st.text}>→ {st.text}</li>)}</ul>
+                      </div>
+                    );
+                  })()}
                   {r.coverage < 0.7 && (
                     <p className="mt-2 text-xs text-amber-300">
                       Tentative: only {Math.round(r.coverage * 100)}% of this match is backed by your answers.

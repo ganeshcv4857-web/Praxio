@@ -42,6 +42,8 @@ Landing ─► Sign up / Log in (Supabase Auth, email + password)
 Protected screens: every in-app screen renders only when a session exists (or in demo
 mode). Data access is protected independently by RLS.
 
+> **Review 1 update:** `profiles` gains `current_stage`, `current_activity`, `primary_goal`, `school_stream`, `current_role`; `feasibility_assessments` gains `primary_funder`, `scholarship_interest` (migration `20261008000000`, not yet applied). See [USER_CONTEXT_AND_FINANCING.md](USER_CONTEXT_AND_FINANCING.md).
+
 ## 3. Tables
 
 ### Identity & Module 1 — Career Fit

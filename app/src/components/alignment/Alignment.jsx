@@ -7,6 +7,7 @@ import { alignShortlist } from '../../lib/alignment/engine.js';
 import { WEIGHTS } from '../../lib/alignment/config.js';
 import { getAlignmentNarrative } from '../../lib/alignment/narrative.js';
 import ScoreBar from '../ScoreBar.jsx';
+import FinancingPlan from '../feasibility/FinancingPlan.jsx';
 
 // Module 5: Parent–Student Alignment. Supportive by design: it looks for a path that
 // keeps as much of the student's goal as possible while respecting family constraints.
@@ -192,6 +193,14 @@ export default function Alignment({ userId, profile, recs, feasibilityRow, onGoF
           <ul className="flex flex-wrap gap-2">
             {a.aligned.map((d) => <li key={d.dimension} className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-sm text-emerald-200">✓ {d.label}</li>)}
           </ul>
+        </section>
+      )}
+
+      {a.familyActions?.length > 0 && (
+        <section className="card">
+          <h3 className="mb-1 font-semibold">What this path needs from your family</h3>
+          <p className="text-xs text-slate-500">Alignment is about the specific actions a path depends on (funding, co-signing a loan, a move, further study), not about whether your family &ldquo;approves&rdquo; of the career.</p>
+          <FinancingPlan plan={a.dimensions.find((d) => d.dimension === 'financial').financing} actions={a.familyActions} title="Family actions for the direct path" />
         </section>
       )}
 

@@ -3,7 +3,7 @@
 # Praxio — career development for engineering students
 
 
-> Discover → Learn → Apply → Build → Prove → Improve. Identity, persistence and data architecture: [docs/DATA_ARCHITECTURE.md](docs/DATA_ARCHITECTURE.md). AI gateway: [docs/AI_GATEWAY.md](docs/AI_GATEWAY.md). Module 4 Market Intelligence: [docs/MARKET_INTELLIGENCE.md](docs/MARKET_INTELLIGENCE.md). Module 5 Parent–Student Alignment: [docs/PARENT_STUDENT_ALIGNMENT.md](docs/PARENT_STUDENT_ALIGNMENT.md).
+> Discover → Learn → Apply → Build → Prove → Improve. Identity, persistence and data architecture: [docs/DATA_ARCHITECTURE.md](docs/DATA_ARCHITECTURE.md). AI gateway: [docs/AI_GATEWAY.md](docs/AI_GATEWAY.md). Module 4 Market Intelligence: [docs/MARKET_INTELLIGENCE.md](docs/MARKET_INTELLIGENCE.md). Module 5 Parent–Student Alignment: [docs/PARENT_STUDENT_ALIGNMENT.md](docs/PARENT_STUDENT_ALIGNMENT.md). Stage-aware context & financing: [docs/USER_CONTEXT_AND_FINANCING.md](docs/USER_CONTEXT_AND_FINANCING.md).
 Profile the student → recommend 5–8 career domains with a suitability score →
 explain each recommendation from the student's own answers → show a pathway.
 

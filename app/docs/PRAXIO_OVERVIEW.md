@@ -21,6 +21,8 @@
 Fit, Feasibility, path ranking, pass/fail, skills, points, alignment). AI only researches,
 explains and drafts text, and its output is validated before use.
 
+> **Review 1 refinements:** stage-aware user context (Class 10 → career switcher), action-aware financing (upfront vs loan vs scholarship, who acts and when, repayment burden), action-level family alignment, and a Decision Engine input bundle. See [USER_CONTEXT_AND_FINANCING.md](USER_CONTEXT_AND_FINANCING.md).
+
 ## 2. Architecture
 
 ```

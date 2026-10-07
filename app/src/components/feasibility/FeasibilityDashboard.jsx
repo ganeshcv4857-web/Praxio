@@ -7,6 +7,7 @@ import {
 } from '../../lib/feasibility/config.js';
 import { FACTORS, categoryOf } from '../../lib/feasibility/scoring.js';
 import ScoreBar from '../ScoreBar.jsx';
+import FinancingPlan from './FinancingPlan.jsx';
 
 // Tailwind needs literal class names, so category tones are mapped here.
 const TONE = {
@@ -162,6 +163,8 @@ function FeasibilityCard({ rec, result, career, cost, onOpenCareer }) {
           );
         })}
       </ul>
+
+      {result.financing && <FinancingPlan plan={result.financing} title="How the typical pathway would be paid for" />}
 
       <blockquote className="mt-5 rounded-xl border-l-2 border-indigo-400 bg-indigo-500/5 px-4 py-3 text-sm text-slate-200">
         <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-indigo-300">Key consideration</p>

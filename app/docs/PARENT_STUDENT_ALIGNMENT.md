@@ -24,6 +24,8 @@ that bridge them. **No new questions are asked:** everything comes from Modules 
 | Path cost / education level / risk | Module 3 pathways (`buildPathways`) + `CAREER_COSTS` |
 | Market evidence | Module 4 cached record (evidence only, never scored) |
 
+> **Review 1 update:** the *Education cost* dimension is now action-aware. It scores the financing actions a path needs from the family (upfront funding, loan co-application, repayment) using the financing plan, and the result lists `familyActions` (supported / conditional / not supported / unknown). See [USER_CONTEXT_AND_FINANCING.md](USER_CONTEXT_AND_FINANCING.md).
+
 ## Score (deterministic, `src/lib/alignment/engine.js`)
 
 Weights are in `src/lib/alignment/config.js`. **They are initial engineered values, not scientifically validated.**
