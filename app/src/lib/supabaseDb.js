@@ -60,6 +60,8 @@ export async function getProfile(userId) {
 // Columns added by migration 20261008000000. If it hasn't been applied yet, writes retry
 // without them so onboarding/feasibility keep working (context is then not persisted).
 const CONTEXT_COLUMNS = ['current_stage', 'current_activity', 'primary_goal', 'school_stream', 'current_role'];
+// Added by migration 20261011000000 (adaptive assessment).
+const ASSESSMENT_COLUMNS = ['assessment_version', 'assessment_meta', 'class12_results_status'];
 const FINANCING_COLUMNS = ['primary_funder', 'scholarship_interest'];
 const isMissingColumn = (e) => e?.code === 'PGRST204' || /column .* (does not exist|not found)|schema cache/i.test(e?.message ?? '');
 const without = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k]) => !keys.includes(k)));
@@ -67,7 +69,7 @@ const without = (obj, keys) => Object.fromEntries(Object.entries(obj).filter(([k
 async function withColumnFallback(write, fields, optionalKeys) {
   const first = await write(fields);
   if (first.error && isMissingColumn(first.error) && optionalKeys.some((k) => k in fields)) {
-    console.warn('Database is missing new columns (run migration 20261008000000); saving without them.');
+    console.warn('Database is missing new columns (run the latest migrations); saving without them.');
     return unwrap(await write(without(fields, optionalKeys)));
   }
   return unwrap(first);
@@ -76,7 +78,7 @@ async function withColumnFallback(write, fields, optionalKeys) {
 export async function saveProfile(userId, fields) {
   return withColumnFallback(
     (f) => supabase.from('profiles').update(f).eq('id', userId).select().single(),
-    fields, CONTEXT_COLUMNS
+    fields, [...CONTEXT_COLUMNS, ...ASSESSMENT_COLUMNS]
   );
 }
 
@@ -103,15 +105,16 @@ export async function saveAssessmentDraft(userId, sessionId, { current_step, dra
   );
 }
 
-export async function completeAssessmentSession(userId, sessionId, { draft, quiz_answers }) {
+export async function completeAssessmentSession(userId, sessionId, { draft, quiz_answers, assessment_version = null }) {
   const fields = {
     status: 'completed', draft, quiz_answers, catalog_version: CATALOG_VERSION,
     completed_at: new Date().toISOString(),
+    ...(assessment_version ? { assessment_version } : {}),
   };
-  if (sessionId) {
-    return unwrap(await supabase.from('assessment_sessions').update(fields).eq('id', sessionId).eq('user_id', userId).select().single());
-  }
-  return unwrap(await supabase.from('assessment_sessions').insert({ user_id: userId, current_step: 0, ...fields }).select().single());
+  const write = (f) => (sessionId
+    ? supabase.from('assessment_sessions').update(f).eq('id', sessionId).eq('user_id', userId).select().single()
+    : supabase.from('assessment_sessions').insert({ user_id: userId, current_step: 0, ...f }).select().single());
+  return withColumnFallback(write, fields, ['assessment_version']);
 }
 
 // ---- Module 1: recommendations -----------------------------------------------

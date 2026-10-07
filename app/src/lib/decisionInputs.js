@@ -56,6 +56,8 @@ function academicModule({ context, profile, recs, academicRecords }) {
     status: 'evaluated',
     mode: eligibilityMode(profile, academicRecords),
     pendingRecords: pendingQualifications(profile, academicRecords),
+    // Assessment answer (school_12): whether Class 12 results are out yet. Null when not asked.
+    resultsStatus: profile?.class12_results_status ?? null,
     careers: recs.map((r) => summariseForDecision(evaluateCareerEligibility({ careerId: r.domainId, academicRecords, profile }))),
   };
 }

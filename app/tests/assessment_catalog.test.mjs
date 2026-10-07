@@ -41,6 +41,12 @@ test('every feed names a known module; Career Fit feeds point at weighted featur
   for (const q of C.CATALOG) {
     for (const f of q.feeds) {
       assert.ok(C.MODULES.includes(f.module), `${q.id}: ${f.module}`);
+      if (q.store === 'meta') {
+        // A gate is legitimate only if it gates questions that feed the module it names.
+        const gated = C.CATALOG.filter((x) => x.requires.includes(q.id));
+        assert.ok(gated.length && gated.every((x) => x.feeds.some((y) => y.module === f.module)), `${q.id} gates nothing for ${f.module}`);
+        continue;
+      }
       if (f.module === 'career_fit' && q.kind !== 'quiz' && q.id !== 'branch') assert.ok(WEIGHTED.has(q.id), `${q.id} feeds career_fit but no career weights it`);
       if (q.kind === 'quiz') assert.ok(WEIGHTED.has(q.dim), q.id);
     }
@@ -87,16 +93,63 @@ const catalogFor = (stage) => C.CATALOG
   .map((q) => ({ id: q.id, req: q.required }))
   .sort((a, b) => a.id.localeCompare(b.id));
 
-test('parity: for every stage the catalog yields exactly the current form', () => {
-  for (const stage of Object.keys(STAGE_PROFILES)) assert.deepEqual(catalogFor(stage), legacyForm(stage), stage);
+test('v1 → v2: the only differences from the old form are the approved changes', () => {
+  const ADDED = {
+    school_10: ['school_stream_leaning', 'tried_programming'],
+    school_11: ['tried_programming'],
+    school_12: ['class12_results_status', 'tried_programming'],
+    career_switcher: ['tried_programming'],
+  };
+  const REMOVED = ['current_activity', 'int_people'];
+  for (const stage of Object.keys(STAGE_PROFILES)) {
+    const v1 = legacyForm(stage);
+    const v2 = catalogFor(stage);
+    const ids1 = v1.map((x) => x.id);
+    const ids2 = v2.map((x) => x.id);
+    assert.deepEqual(ids2.filter((id) => !ids1.includes(id)).sort(), (ADDED[stage] ?? []).sort(), `${stage}: added`);
+    assert.deepEqual(ids1.filter((id) => !ids2.includes(id)).sort(), REMOVED, `${stage}: removed`);
+    const req1 = Object.fromEntries(v1.map((x) => [x.id, x.req]));
+    const changed = v2.filter((x) => x.id in req1 && req1[x.id] !== x.req).map((x) => x.id);
+    assert.deepEqual(changed, ['full_name'], `${stage}: only the name became optional`);
+  }
 });
 
-test('parity: Module 2 catalog matches the current wizard', () => {
+test('Module 2 catalog still matches the wizard (changed in AA5)', () => {
   const wiz = C.CATALOG.filter((q) => q.assessment === 'feasibility');
   assert.deepEqual(wiz.map((q) => q.id).sort(), ['education_budget', 'education_preference', 'family_priorities', 'income_band', 'loan_willingness', 'location_preference', 'primary_funder', 'relocation', 'risk_tolerance', 'scholarship_interest']);
-  assert.deepEqual(wiz.filter((q) => q.required).map((q) => q.id).sort(), ['education_budget', 'education_preference', 'income_band', 'loan_willingness', 'location_preference', 'relocation', 'risk_tolerance']);
 });
 
-test('parity: sliders still record the legacy default until AA3 changes it', () => {
-  for (const q of C.CATALOG.filter((x) => x.kind === 'slider')) assert.equal(q.legacyDefault, 50, q.id);
+test('sliders have no default and offer "not sure"; Likert items offer "not sure"', () => {
+  for (const q of C.CATALOG.filter((x) => x.kind === 'slider')) {
+    assert.equal(q.legacyDefault, undefined, q.id);
+    assert.equal(q.unknown, 'absent', q.id);
+    assert.equal(q.required, false, `${q.id}: untouched means unknown`);
+  }
+  for (const q of C.CATALOG.filter((x) => x.kind === 'likert')) assert.equal(q.unknown, 'absent', q.id);
+});
+
+test('retired questions are gone from the catalog but kept in the feature model for legacy data', () => {
+  for (const id of Object.keys(C.RETIRED)) assert.equal(C.QUESTION_BY_ID[id], undefined, id);
+  assert.ok(F.INTERESTS.some((x) => x.key === 'int_people'), 'legacy int_people answers stay readable');
+});
+
+test('wording changes bumped the version; meaning changes got new ids', () => {
+  for (const q of C.CATALOG) {
+    if (q.schoolLabel && q.schoolLabel !== q.label) assert.ok(q.v >= 2, `${q.id}: school wording needs a version bump`);
+    if (q.schoolLeft && (q.schoolLeft !== q.left || q.schoolRight !== q.right)) assert.ok(q.v >= 2, q.id);
+  }
+  // Class 10 "leaning" is a different measurement from Class 11–12 "stream": a new id on the same field.
+  assert.notEqual(C.QUESTION_BY_ID.school_stream_leaning.id, C.QUESTION_BY_ID.school_stream.id);
+  assert.equal(C.QUESTION_BY_ID.school_stream_leaning.field, C.QUESTION_BY_ID.school_stream.field);
+  assert.equal(C.ASSESSMENT_VERSION, 'assessment-v2');
+  assert.equal(C.assessmentVersionOf({}), 'assessment-v1', 'unversioned profiles are legacy v1');
+  assert.equal(C.assessmentVersionOf({ assessment_version: 'assessment-v2' }), 'assessment-v2');
+});
+
+test('assessment migration is additive: nullable/defaulted columns, no backfill, no RLS change', () => {
+  const sql = readFileSync(new URL('../supabase/migrations/20261011000000_adaptive_assessment.sql', import.meta.url), 'utf8').replace(/--.*$/gm, '');
+  for (const col of ['assessment_version text', 'assessment_meta jsonb not null default', 'class12_results_status text check']) assert.ok(sql.includes(col), col);
+  assert.match(sql, /class12_results_status in \('out', 'awaiting', 'unsure'\)/);
+  assert.ok(!/\bupdate\s+public\./i.test(sql), 'no backfill of old answers');
+  assert.ok(!/policy|row level security|drop column/i.test(sql), 'no RLS change, nothing dropped');
 });

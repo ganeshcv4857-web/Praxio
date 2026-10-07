@@ -71,8 +71,14 @@ const pathOf = (q) => q.field.split('.');
  */
 export function readAnswers({ profile = {}, quiz = [], meta = {} } = {}, catalog = CATALOG, { assessment = 'profile' } = {}) {
   const out = {};
+  const stage = own(profile, 'current_stage');
   for (const q of catalog.filter((x) => x.assessment === assessment)) {
-    if (meta?.answers?.[q.id]?.status === 'unknown') { out[q.id] = UNKNOWN; continue; }
+    // A stored value belongs to the question for the stored stage (several questions may share
+    // a field, e.g. Class 10 stream leaning and Class 11–12 stream both write school_stream).
+    if (stage && q.stages !== null && !q.stages.includes(stage)) continue;
+    const m = meta?.answers?.[q.id];
+    if (m?.status === 'unknown') { out[q.id] = UNKNOWN; continue; }
+    if (q.store === 'meta') { if (isAnswered(m?.value)) out[q.id] = m.value; continue; }
     const [head, key] = pathOf(q);
     const value = head === 'quiz' ? quiz?.[Number(key)] : key ? own(own(profile, head), key) : own(profile, head);
     if (isAnswered(value)) out[q.id] = value;
@@ -96,6 +102,7 @@ export function writeAnswers(answers, plan, catalog = CATALOG, { assessment = 'p
   const quiz = [];
   const metaAnswers = {};
   for (const q of qs) {
+    if (q.store === 'meta') continue;
     const [head, key] = pathOf(q);
     if (head === 'quiz') { quiz[Number(key)] = null; continue; }
     if (key && visible.has(q.id)) fields[head] ??= {};
@@ -104,8 +111,8 @@ export function writeAnswers(answers, plan, catalog = CATALOG, { assessment = 'p
     if (!visible.has(q.id)) continue;
     const value = own(answers, q.id);
     if (!isAnswered(value)) continue;
-    metaAnswers[q.id] = { status: value === UNKNOWN ? 'unknown' : 'answered', v: q.v };
-    if (value === UNKNOWN) continue;
+    metaAnswers[q.id] = { status: value === UNKNOWN ? 'unknown' : 'answered', v: q.v, ...(q.store === 'meta' && value !== UNKNOWN ? { value } : {}) };
+    if (value === UNKNOWN || q.store === 'meta') continue;
     const [head, key] = pathOf(q);
     if (head === 'quiz') quiz[Number(key)] = value;
     else if (key) fields[head][key] = value;
@@ -115,7 +122,7 @@ export function writeAnswers(answers, plan, catalog = CATALOG, { assessment = 'p
   // must clear it rather than leave an older stored value standing.
   for (const q of qs) {
     const [head, key] = pathOf(q);
-    if (!key && head !== 'quiz' && !(head in fields)) fields[head] = null;
+    if (q.store !== 'meta' && !key && head !== 'quiz' && !(head in fields)) fields[head] = null;
   }
   return { fields, quiz, meta: { version, answers: metaAnswers } };
 }

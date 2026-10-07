@@ -91,14 +91,14 @@ export async function saveAssessmentDraft(userId, sessionId, { current_step, dra
   return row;
 }
 
-export async function completeAssessmentSession(userId, sessionId, { draft, quiz_answers }) {
+export async function completeAssessmentSession(userId, sessionId, { draft, quiz_answers, assessment_version = null }) {
   const s = load();
   let row = sessionsList(s).find((r) => r.id === sessionId);
   if (!row) {
     row = { id: id(), user_id: userId, started_at: now(), current_step: 0 };
     sessionsList(s).push(row);
   }
-  Object.assign(row, { status: 'completed', draft, quiz_answers, catalog_version: CATALOG_VERSION, completed_at: now(), updated_at: now() });
+  Object.assign(row, { status: 'completed', draft, quiz_answers, catalog_version: CATALOG_VERSION, assessment_version, completed_at: now(), updated_at: now() });
   save(s);
   return row;
 }

@@ -241,8 +241,9 @@ const QUAL_LABEL = { class_10: 'Class 10', class_12: 'Class 12' };
  * Input is bundle.academic: summarised results from the academic eligibility engine.
  * Every action requires a concrete dependency in those results; unknown stays unknown and is
  * never treated as failure.
- *   add_academic_record  a route needs a record that is missing (pending school_12 → 'later';
- *                        achieved-mode requirement blocked on a missing record → 'evidence')
+ *   add_academic_record  a route needs a record that is missing (pending school_12 → 'later', or
+ *                        'evidence' once the student says results are out; achieved-mode
+ *                        requirement blocked on a missing record → 'evidence')
  *   take_subject         prospective route needs a subject the planned stream lacks, and no
  *                        route into that career is open → 'dependency'
  *   compare_routes       the career's first route is closed/uncertain while another is viable
@@ -255,7 +256,8 @@ export function academicCandidates(academic, focus) {
 
   // 1. Missing academic records.
   const records = new Map();
-  for (const q of academic.pendingRecords) records.set(q, 'later');
+  // Results already out → the marks can be added now; awaiting/unsure → not yet urgent.
+  for (const q of academic.pendingRecords) records.set(q, academic.resultsStatus === 'out' ? 'evidence' : 'later');
   for (const a of inFocus) {
     for (const r of a.routes) for (const m of r.remedies) if (m.type === 'add_record' && m.qualification) records.set(m.qualification, 'evidence');
   }
@@ -264,7 +266,7 @@ export function academicCandidates(academic, focus) {
     out.push(action('add_academic_record', {
       tier, qualification: q, title: `Add your ${label} marks`,
       steps: [`Enter or upload your ${label} subjects and marks`],
-      reasons: [{ text: tier === 'evidence' ? `Entry-route requirements cannot be checked without your ${label} record` : `Your ${label} marks will show which entry routes are open`, basis: 'Academic eligibility' }],
+      reasons: [{ text: tier === 'evidence' ? `Entry-route requirements cannot be checked without your ${label} record` : academic.resultsStatus === 'awaiting' ? `When your ${label} results are out, adding your marks will show which entry routes are open` : `Your ${label} marks will show which entry routes are open`, basis: 'Academic eligibility' }],
     }));
   }
 
