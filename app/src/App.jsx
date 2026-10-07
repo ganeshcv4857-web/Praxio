@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { supabase, isConfigured } from './lib/supabase.js';
 import * as db from './lib/db.js';
 import { DEMO_USER_ID, readDemoSnapshot, resetDemo } from './lib/demoDb.js';
@@ -24,6 +24,10 @@ import { evaluateAll } from './lib/feasibility/scoring.js';
 import { pickInputs as pickFeasibilityInputs } from './components/feasibility/FeasibilityWizard.jsx';
 import { FEASIBILITY_VERSION } from './lib/feasibility/config.js';
 import { userContext } from './lib/userContext.js';
+import { clearEntryStage, saveEntryStage, withEntryStage } from './lib/entryStage.js';
+
+// The cinematic opening is only needed by signed-out visitors, so it loads on demand.
+const Opening = lazy(() => import('./components/opening/Opening.jsx'));
 
 // Navigation (state-based, as before):
 //   screen:    'loading' | 'landing' | 'auth' | 'reset_password' | 'assessment' | 'app'
@@ -45,6 +49,7 @@ export default function App() {
   const [explaining, setExplaining] = useState(false);
   const [navCount, setNavCount] = useState(0); // bumps on sidebar clicks so sub-views reset to their start
   const [importState, setImportState] = useState('none'); // 'none' | 'offer' | 'busy' | 'done'
+  const [aboutOpen, setAboutOpen] = useState(false); // signed-out: the classic Landing instead of the opening
   const [error, setError] = useState('');
   const userLogout = useRef(false);
 
@@ -162,6 +167,7 @@ export default function App() {
     setProfile(prof);
     await db.completeAssessmentSession(userId, assessment?.id ?? null, { draft: answers, quiz_answers: quiz ?? [], assessment_version: answers.assessment_version ?? null });
     setAssessment(null);
+    clearEntryStage();
     const list = toShortlist(rankCareers(prof));
     const rows = (await db.replaceRecommendations(userId, list)).map(fromRow);
     setRecs(rows);
@@ -216,12 +222,17 @@ export default function App() {
   // ---- Screens ------------------------------------------------------------
   if (screen === 'loading') return <div className="grid min-h-screen place-items-center text-slate-400">Loading Praxio…</div>;
   if (screen === 'landing') {
+    const signUp = () => (isConfigured ? (setAuthTab('signup'), setScreen('auth')) : loadUser(DEMO_USER_ID));
+    const logIn = () => { setAuthTab('login'); setScreen('auth'); };
+    if (aboutOpen) return <Landing demo={!isConfigured} onSignUp={signUp} onLogIn={logIn} />;
     return (
-      <Landing
-        demo={!isConfigured}
-        onSignUp={() => (isConfigured ? (setAuthTab('signup'), setScreen('auth')) : loadUser(DEMO_USER_ID))}
-        onLogIn={() => { setAuthTab('login'); setScreen('auth'); }}
-      />
+      <Suspense fallback={<div className="min-h-screen bg-[#F4F2EE] dark:bg-[#0E0F12]" />}>
+        <Opening
+          onContinue={(stageId) => { saveEntryStage(stageId); signUp(); }}
+          onSignIn={isConfigured ? logIn : null}
+          onExplore={() => setAboutOpen(true)}
+        />
+      </Suspense>
     );
   }
   if (screen === 'auth') {
@@ -240,7 +251,8 @@ export default function App() {
   }
   if (screen === 'assessment') {
     // Resume an unfinished attempt; otherwise start from the saved profile (retake) or blank.
-    const initial = assessment ? { ...profile, ...assessment.draft } : profile;
+    // A stage picked in the opening pre-answers "Where are you now?" for a first attempt.
+    const initial = assessment ? { ...profile, ...assessment.draft } : withEntryStage(profile);
     return (
       <Onboarding
         initial={initial}

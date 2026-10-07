@@ -160,7 +160,7 @@ D:\DataQuest
 └─ app/
    ├─ src/  App.jsx, components/{feasibility,development,market,alignment}/, lib/{feasibility,development,alignment}/
    ├─ supabase/  migrations/ (5), functions/career-ai/
-   ├─ public/brand/praxio-logo.webp
+   ├─ public/brand/praxio-mark.svg (favicon; the wordmark is text, see components/Logo.jsx)
    ├─ tests/  scoring, feasibility, development, foundation, market, market_intelligence, alignment
    └─ docs/   DATA_ARCHITECTURE, AI_GATEWAY, MARKET_INTELLIGENCE, PARENT_STUDENT_ALIGNMENT, PRAXIO_OVERVIEW
 ```

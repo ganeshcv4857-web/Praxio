@@ -1,4 +1,4 @@
-<p align="center"><img src="public/brand/praxio-logo.webp" alt="Praxio" width="420" /></p>
+<p align="center"><img src="public/brand/praxio-mark.svg" alt="Praxio" width="96" /></p>
 
 # Praxio — career development for engineering students
 

@@ -1,0 +1,59 @@
+/* Cinematic opening. Self-contained theme tokens: light by default, `.dark` for dark. */
+.pxo {
+  --bg: #F4F2EE; --surface: #FFFFFF; --surface-2: #ECE9E3; --text: #141519; --text-2: #55575E; --text-3: #8A8C92;
+  --line: rgba(20,21,25,.10); --line-2: rgba(20,21,25,.18);
+  --accent: #2F54EB; --accent-soft: rgba(47,84,235,.10); --on-accent: #FFFFFF;
+  --shadow: 0 1px 2px rgba(20,21,25,.05), 0 18px 50px -18px rgba(20,21,25,.18);
+  --fig-top: #2F54EB; --fig-top-2: #2443C4; --fig-pants: #26282E; --fig-pants-2: #3C3F48; --shoe: #141519; --sole: #F4F2EE;
+  --skin: #C08E6C; --skin-2: #A97A5C; --hair: #1C1B1F; --blush: rgba(230,110,110,.35); --pack: #F0A33A; --pack-2: #C9821F;
+  --book1: #F0A33A; --book2: #E4DED3; --book3: #2B2D33; --device: #C8CAD0; --device-2: #B4B7BE;
+  --desk: #DCD3C6; --desk-leg: #B9AE9F; --lamp: #141519; --lamp-light: rgba(255,190,100,.32); --pot: #C46A45; --leaf: #3F8F5B; --leaf-2: #2F7448;
+  --pool: rgba(47,84,235,.07); --contact: rgba(20,21,25,.16); --screen: #16171B; --dim: rgba(20,21,25,.16);
+  position: fixed; inset: 0; overflow: hidden;
+  font-family: 'Geist', system-ui, sans-serif; background: var(--bg); color: var(--text);
+  transition: background .6s ease, color .6s ease;
+}
+.pxo.dark {
+  --bg: #0E0F12; --surface: #17181C; --surface-2: #202126; --text: #F2F1EE; --text-2: #A6A7AD; --text-3: #72737A;
+  --line: rgba(255,255,255,.08); --line-2: rgba(255,255,255,.16);
+  --accent: #8FA6FF; --accent-soft: rgba(143,166,255,.13); --on-accent: #0E0F12;
+  --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 24px 60px -20px rgba(0,0,0,.7);
+  --fig-top: #7C93F5; --fig-top-2: #5F76DA; --fig-pants: #C9C7C0; --fig-pants-2: #9C9A94; --shoe: #F2F1EE; --sole: #8FA6FF;
+  --pack: #E39B3A; --pack-2: #B8791F; --book2: #5B5E67; --book3: #E4DED3; --device: #4A4D55; --device-2: #3A3C43;
+  --desk: #25262B; --desk-leg: #34363C; --lamp: #D9D8D3; --lamp-light: rgba(255,200,120,.16); --pot: #B5603D; --leaf: #4FA36C; --leaf-2: #3B8655;
+  --pool: rgba(143,166,255,.08); --contact: rgba(0,0,0,.55); --screen: #050506; --dim: rgba(0,0,0,.6);
+}
+.pxo *, .pxo *::before, .pxo *::after { box-sizing: border-box; }
+.pxo button { font-family: inherit; cursor: pointer; }
+.pxo a { color: var(--accent); }
+.pxo a:hover { color: var(--text); }
+.pxo a:focus-visible, .pxo button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.pxo .ser { font-family: 'Instrument Serif', serif; font-style: italic; font-weight: 400; letter-spacing: -.01em; }
+.pxo .disp { font-weight: 600; letter-spacing: -.055em; line-height: 1; white-space: nowrap; }
+.pxo .limb { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+@keyframes pxo-halo { 0% { transform: scale(1); opacity: .5; } 100% { transform: scale(2.2); opacity: 0; } }
+.pxo .halo { animation: pxo-halo 2.2s cubic-bezier(.2,.7,.3,1) infinite; }
+@keyframes pxo-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+.pxo .sway { animation: pxo-sway 3.6s ease-in-out infinite; transform-origin: 50% 100%; transform-box: fill-box; }
+@keyframes pxo-chip { 0% { transform: scale(1); } 35% { transform: scale(.9,1.08); } 65% { transform: scale(1.06,.95); } 100% { transform: scale(1); } }
+.pxo .chip { transition: background .25s, color .25s, box-shadow .25s; }
+.pxo .chip:hover { box-shadow: 0 0 0 2px var(--accent) !important; }
+.pxo .chip.on { animation: pxo-chip .5s cubic-bezier(.3,1.5,.5,1); }
+@keyframes pxo-badge { 0% { transform: scale(0) rotate(-40deg); } 70% { transform: scale(1.25) rotate(8deg); } 100% { transform: scale(1) rotate(0); } }
+.pxo .badge { animation: pxo-badge .5s cubic-bezier(.3,1.5,.5,1); }
+.pxo .pill { transition: transform .3s cubic-bezier(.3,1.6,.5,1), background .25s; }
+.pxo .pill:hover { transform: translateY(-3px) scale(1.03); }
+.pxo .skip { opacity: .7; transition: opacity .25s, background .25s, color .25s; }
+.pxo .skip:hover { opacity: 1; background: var(--accent-soft); color: var(--text); }
+.pxo .enter { transition: transform .35s cubic-bezier(.3,1.6,.5,1), box-shadow .3s; }
+.pxo .enter:hover { transform: scale(1.05); }
+.pxo .enter:active { transform: scale(.94,.9); }
+.pxo .enter .arr { transition: transform .35s cubic-bezier(.3,1.6,.5,1); }
+.pxo .enter:hover .arr { transform: translateX(4px) rotate(-8deg); }
+@keyframes pxo-ring { 0% { transform: scale(1); opacity: .35; } 100% { transform: scale(1.35,1.6); opacity: 0; } }
+.pxo .ringPulse { animation: pxo-ring 2s cubic-bezier(.2,.7,.3,1) infinite; }
+.pxo.rm .tr { transition: transform .8s ease, left .8s ease, top .8s ease, width .8s ease, height .8s ease, opacity .6s ease, clip-path .6s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .pxo .halo, .pxo .sway, .pxo .chip.on, .pxo .badge, .pxo .ringPulse { animation: none; }
+}
