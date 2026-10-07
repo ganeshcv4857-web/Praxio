@@ -28,6 +28,15 @@ export async function saveGeneratedOutput(userId, output) {
   return unwrap(await supabase.from('generated_outputs').insert({ user_id: userId, ...output }).select().single());
 }
 
+/** Latest output about a catalog entity (subject_key), e.g. market intelligence for a career. */
+export async function getLatestGeneratedOutput(userId, subjectType, subjectKey, kind) {
+  return unwrap(
+    await supabase.from('generated_outputs').select('*')
+      .eq('user_id', userId).eq('subject_type', subjectType).eq('subject_key', subjectKey).eq('kind', kind)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle()
+  );
+}
+
 /** Latest output per subject id for one kind, as { subjectId: row }. */
 async function latestOutputs(userId, subjectType, kind, ids) {
   if (!ids.length) return {};

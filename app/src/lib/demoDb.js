@@ -56,6 +56,12 @@ export async function saveGeneratedOutput(userId, output) {
   return row;
 }
 
+export async function getLatestGeneratedOutput(_userId, subjectType, subjectKey, kind) {
+  return [...generatedList(load())]
+    .filter((r) => r.subject_type === subjectType && r.subject_key === subjectKey && r.kind === kind)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null;
+}
+
 function latestOutputs(s, subjectType, kind) {
   const out = {};
   for (const r of [...generatedList(s)].sort((a, b) => b.created_at.localeCompare(a.created_at))) {

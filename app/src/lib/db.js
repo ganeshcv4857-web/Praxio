@@ -6,6 +6,7 @@ import * as demo from './demoDb.js';
 const impl = isConfigured ? remote : demo;
 
 export const saveGeneratedOutput = (...a) => impl.saveGeneratedOutput(...a);
+export const getLatestGeneratedOutput = (...a) => impl.getLatestGeneratedOutput(...a);
 export const getAssessmentSession = (...a) => impl.getAssessmentSession(...a);
 export const saveAssessmentDraft = (...a) => impl.saveAssessmentDraft(...a);
 export const completeAssessmentSession = (...a) => impl.completeAssessmentSession(...a);

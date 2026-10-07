@@ -1,13 +1,24 @@
-// career-ai: the only place that talks to Gemini. The API key never reaches the browser.
+// career-ai: Praxio's AI gateway — the only code that talks to AI providers. API keys
+// live in Supabase function secrets and never reach the browser.
 //
 // Deployed with JWT verification on (Supabase default), so only signed-in users can call it.
-//   POST { mode: 'explain', context }            -> { explanations: { [domainId]: {...} }, model }
-//   POST { mode: 'chat', context, history, message } -> { reply, model }
+//   POST { mode: 'explain', context }                -> { explanations: { [domainId]: {...} }, model }   (Gemini)
+//   POST { mode: 'chat', context, history, message } -> { reply, model }                                 (Gemini)
+//   POST { mode: 'project', context }                -> { customisation, model }                          (Gemini)
+//   POST { mode: 'evaluate', context }               -> { evaluation, model }                             (Gemini)
+//   POST { mode: 'market_research', context }        -> { research }                                      (Groq)
+//     on failure: 503/502 { error: 'Market intelligence temporarily unavailable.', code }
 //
 // `context` is built client-side by src/lib/ai.js from the student's own saved profile
 // and scored shortlist (see buildContext there).
 
+import { checkMode } from './gateway.js';
+import { MARKET_CONFIG, MarketResearchError, UNAVAILABLE_MESSAGE, researchMarket } from './market.js';
+
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') ?? '';
+const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
+const GROQ_MODEL = Deno.env.get('GROQ_MODEL') ?? MARKET_CONFIG.model;
+const MAX_BODY_BYTES = 256 * 1024;
 // Comma-separated, tried in order. Override with `supabase secrets set GEMINI_MODELS=...`.
 const MODELS = (Deno.env.get('GEMINI_MODELS') ?? 'gemini-flash-latest,gemini-2.5-flash')
   .split(',').map((m) => m.trim()).filter(Boolean);
@@ -233,10 +244,29 @@ async function evaluateProject(ctx: EvalCtx) {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'POST only' }, 405);
-  if (!GEMINI_API_KEY) return json({ error: 'GEMINI_API_KEY is not set for this function' }, 500);
+  if (Number(req.headers.get('content-length') ?? 0) > MAX_BODY_BYTES) return json({ error: 'request too large' }, 413);
 
   try {
-    const { mode, context, history = [], message } = await req.json();
+    const raw = await req.text();
+    if (raw.length > MAX_BODY_BYTES) return json({ error: 'request too large' }, 413);
+    const { mode, context, history = [], message } = JSON.parse(raw);
+
+    // Each mode needs only its own provider's key.
+    const blocked = checkMode(mode, { GEMINI_API_KEY, GROQ_API_KEY });
+    if (blocked) return json(blocked.body, blocked.status);
+
+    if (mode === 'market_research') {
+      try {
+        return json({ research: await researchMarket(context, { apiKey: GROQ_API_KEY, model: GROQ_MODEL }) });
+      } catch (e) {
+        // Log only the failure class — never the key, prompt or student context.
+        const code = e instanceof MarketResearchError ? e.code : 'internal';
+        console.warn('market_research failed:', code, e instanceof MarketResearchError ? e.detail : '');
+        const status = code === 'bad_request' ? 400 : code === 'not_configured' ? 503 : 502;
+        return json({ error: UNAVAILABLE_MESSAGE, code }, status);
+      }
+    }
+
     if (mode === 'project') {
       if (!context?.template?.requirements?.length) return json({ error: 'context.template is required' }, 400);
       return json(await customiseProject(context));

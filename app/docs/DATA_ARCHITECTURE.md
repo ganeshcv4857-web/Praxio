@@ -107,7 +107,8 @@ Then set the frontend env (`app/.env`) and run `npm run dev`.
 | `VITE_SUPABASE_ANON_KEY` | `app/.env` | Yes (public; all access gated by RLS) |
 | `GEMINI_API_KEY` | Supabase function secret | **No** |
 | `GEMINI_MODELS` (optional) | Supabase function secret | No |
-| `GROQ_API_KEY` (future) | Supabase function secret only | **No — never add a `VITE_` prefix** |
+| `GROQ_API_KEY` | Supabase function secret only (used by `market_research`) | **No — never add a `VITE_` prefix** |
+| `GROQ_MODEL` (optional) | Supabase function secret | No |
 
 `.env` files are git-ignored; `app/.env.example` lists the frontend variables.
 
@@ -125,7 +126,12 @@ Then set the frontend env (`app/.env`) and run `npm run dev`.
 | Demo-mode data | `localStorage['app_demo_db_v1']` | Unchanged in demo mode. With Supabase configured, the dashboard offers a one-time **import** (answers, feasibility answers, path, courses, learned modules; scores recomputed; evaluations/points/skills not imported) |
 | UI navigation state | React state | still React state (by design); the dashboard re-derives "where you are" from persisted data |
 
-## 7. Groq readiness (not implemented)
+## 7. Groq layer
+
+The first Groq capability, **market intelligence research**, is implemented. See [AI_GATEWAY.md](AI_GATEWAY.md).
+Its results are stored as `generated_outputs` rows (`kind = market_insight`); no new table was needed.
+
+### Original readiness notes
 
 - One table (`generated_outputs`) already models what Groq will produce: typed `kind`,
   subject linkage, provenance (`generator`, `model`), evidence (`sources`), freshness

@@ -1,7 +1,7 @@
 # Praxio — career development for engineering students
 
 
-> Discover → Learn → Apply → Build → Prove → Improve. Identity, persistence and data architecture: [docs/DATA_ARCHITECTURE.md](docs/DATA_ARCHITECTURE.md).
+> Discover → Learn → Apply → Build → Prove → Improve. Identity, persistence and data architecture: [docs/DATA_ARCHITECTURE.md](docs/DATA_ARCHITECTURE.md). AI gateway and Groq market intelligence: [docs/AI_GATEWAY.md](docs/AI_GATEWAY.md).
 Profile the student → recommend 5–8 career domains with a suitability score →
 explain each recommendation from the student's own answers → show a pathway.
 
