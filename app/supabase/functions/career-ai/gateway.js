@@ -7,6 +7,7 @@ export const MODE_PROVIDERS = Object.freeze({
   evaluate: 'groq',
   market_research: 'groq',
   alignment: 'groq',
+  decision: 'groq',
 });
 
 export const PROVIDER_SECRET = Object.freeze({ groq: 'GROQ_API_KEY' });

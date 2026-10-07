@@ -9,6 +9,7 @@ import { COURSE_BY_ID } from '../lib/development/catalog.js';
 import { ASSESSMENT_STEPS } from './Onboarding.jsx';
 import ScoreBar from './ScoreBar.jsx';
 import { userContext, labelOf } from '../lib/userContext.js';
+import NextAction from './decision/NextAction.jsx';
 
 // The authenticated user's home. Everything shown is derived from persisted data,
 // so it is the same after a refresh, a new browser or a new device.
@@ -111,6 +112,7 @@ export default function Dashboard({ userId, profile, recs, feasibilityRow, asses
             </div>
             <button className="btn-primary px-5 py-2.5" onClick={next.action}>{next.cta}</button>
           </section>
+          {m1Done && <NextAction userId={userId} profile={profile} recs={recs} inputs={inputs} go={go} />}
         </>
       )}
 

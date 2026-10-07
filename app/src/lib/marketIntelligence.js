@@ -85,3 +85,13 @@ export async function getMarketIntelligence({ userId, careerId, context, force =
     return { status: 'unavailable', message: UNAVAILABLE_MESSAGE, reason: e.message, ...(stale ? { stale } : {}) };
   }
 }
+
+/**
+ * Cache-only market records for several careers: { [careerId]: record }. Never calls Groq,
+ * never triggers research (the Decision Engine uses this). Careers without a valid cached
+ * record are simply absent, i.e. unknown.
+ */
+export async function getCachedMarketForCareers(userId, careerIds, now = new Date()) {
+  const rows = await Promise.all(careerIds.map((id) => getCachedMarketIntelligence(userId, id, now)));
+  return Object.fromEntries(careerIds.map((id, i) => [id, rows[i]?.record]).filter(([, r]) => r));
+}
