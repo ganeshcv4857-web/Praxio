@@ -48,14 +48,14 @@ npx eas-cli@latest build --platform android --profile preview
 
 The preview profile produces an APK you can install directly (or share the link EAS gives you).
 Repeat the `env:create` commands with `--environment production` before a `production` build.
-Installed builds register the `praxio://` scheme, so scanning the website's QR with the phone's
-own camera opens the app and connects it.
+The website's QR is an ordinary https link (`/link?code=…`), so any phone camera opens it; that page
+offers "Open the Praxio app" (a `praxio://link?code=…` link, which installed builds handle and pair
+from directly) and shows the code to type.
 
 ## Developing
 
 `npm test` runs the view-model tests (`tests/model.test.mjs`): `src/model.js` holds every screen's
 data logic with no React Native imports, tested against empty, malformed, old-cache and realistic data.
-
 
 `http://localhost:8081/?preview` on the web dev server (`npx expo start --web`) renders the signed-in
 screens with sample data built by Praxio's own logic (development only; never in a phone build).
