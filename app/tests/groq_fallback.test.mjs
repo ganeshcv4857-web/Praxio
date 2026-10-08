@@ -26,3 +26,25 @@ test('other errors are not retried', async () => {
   await assert.rejects(groqJson({ apiKey: 'k', system: 's', user: 'u', name: 'x', schema, fetchImpl }), MarketResearchError);
   assert.equal(n, 1);
 });
+
+test('a rate/daily-limit 429 retries once on the fallback model', async () => {
+  const { MARKET_CONFIG } = await import('../supabase/functions/career-ai/market.js');
+  const models = [];
+  const fetchImpl = async (_url, init) => {
+    const body = JSON.parse(init.body);
+    models.push(body.model);
+    return body.model === MARKET_CONFIG.model
+      ? reply(429, { error: { message: 'Rate limit reached ... tokens per day (TPD)' } })
+      : reply(200, { choices: [{ message: { content: '{"ok":true}' } }] });
+  };
+  const { data } = await groqJson({ apiKey: 'k', system: 's', user: 'u', name: 'x', schema, fetchImpl });
+  assert.deepEqual(data, { ok: true });
+  assert.deepEqual(models, [MARKET_CONFIG.model, MARKET_CONFIG.fallbackModel]);
+});
+
+test('if the fallback model is also limited, the error surfaces (no loop)', async () => {
+  let n = 0;
+  const fetchImpl = async () => { n++; return reply(429, { error: { message: 'Rate limit reached' } }); };
+  await assert.rejects(groqJson({ apiKey: 'k', system: 's', user: 'u', name: 'x', schema, fetchImpl }), MarketResearchError);
+  assert.equal(n, 2);
+});

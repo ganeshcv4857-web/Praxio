@@ -13,6 +13,7 @@
 
 export const MARKET_CONFIG = {
   model: 'openai/gpt-oss-120b',
+  fallbackModel: 'openai/gpt-oss-20b', // used when the main model hits a rate or daily token limit (429)
   endpoint: 'https://api.groq.com/openai/v1/chat/completions',
   ttlDays: 7,                 // MARKET_INTELLIGENCE_TTL_DAYS: researched data counts as fresh for this long
   schemaVersion: 'market-v2', // bump when the record shape changes; older cached records are re-researched
@@ -338,6 +339,12 @@ export async function groq(fetchImpl, apiKey, body, timeoutMs) {
     throw new MarketResearchError(e?.name === 'AbortError' ? 'timeout' : 'upstream', 'Groq request failed');
   } finally {
     clearTimeout(timer);
+  }
+  if (res.status === 429 && body.model !== MARKET_CONFIG.fallbackModel) {
+    // Rate/daily token limit on this model. Groq limits each model separately, so retry once on
+    // the smaller model (same tools and structured-output support) instead of failing.
+    await res.body?.cancel?.().catch?.(() => {});
+    return groq(fetchImpl, apiKey, { ...body, model: MARKET_CONFIG.fallbackModel }, timeoutMs);
   }
   if (!res.ok) {
     // Groq's error message (e.g. invalid parameter) helps diagnose; it never contains our key.
