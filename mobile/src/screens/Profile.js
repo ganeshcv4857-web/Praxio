@@ -1,10 +1,24 @@
-import { Linking, Pressable, View } from 'react-native';
+import { Alert, Linking, Platform, Pressable, View } from 'react-native';
 import { userContext } from '../../../app/src/lib/userContext.js';
 import { supabase, WEB_URL } from '../supabaseClient.js';
+import { clearCache } from '../data.js';
 import { useTheme } from '../theme.js';
 import { Button, Card, Headline, Label, Screen, T } from '../ui.js';
 
 const MODES = [['system', 'Phone'], ['light', 'Light'], ['dark', 'Dark']];
+
+// Sign out also clears this phone's cached Praxio data.
+async function signOut() {
+  await clearCache();
+  await supabase.auth.signOut().catch(() => {});
+}
+function confirmSignOut() {
+  if (Platform.OS === 'web') { signOut(); return; }
+  Alert.alert('Sign out of Praxio?', 'You can connect again any time with a code from the website.', [
+    { text: 'Cancel', style: 'cancel' },
+    { text: 'Sign out', style: 'destructive', onPress: () => { signOut(); } },
+  ]);
+}
 
 export default function Profile({ profile, email }) {
   const t = useTheme();
@@ -37,7 +51,7 @@ export default function Profile({ profile, email }) {
         <Button kind="link" title="Open Praxio on the web →" onPress={() => Linking.openURL(WEB_URL)} />
       </Card>
 
-      <Button kind="ghost" title="Sign out" onPress={() => supabase.auth.signOut().catch(() => {})} />
+      <Button kind="ghost" title="Sign out" onPress={() => confirmSignOut()} />
     </Screen>
   );
 }

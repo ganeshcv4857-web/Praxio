@@ -2,6 +2,7 @@ import { Linking, View } from 'react-native';
 import { CAREER_BY_ID } from '../../../app/src/lib/careers.js';
 import { userContext } from '../../../app/src/lib/userContext.js';
 import { WEB_URL } from '../supabaseClient.js';
+import { timeAgo } from '../data.js';
 import { useTheme } from '../theme.js';
 import { Bar, Button, Card, Chip, Headline, Label, Notice, Screen, T } from '../ui.js';
 
@@ -11,7 +12,7 @@ import { Bar, Button, Card, Chip, Headline, Label, Notice, Screen, T } from '../
 const IN_APP = new Set(['trial_project', 'build_skill', 'complete_project', 'pursue_certification', 'map_transferable_skills']);
 const STEPS = ['Discovered', 'Understood', 'Validated', 'Building', 'Ready'];
 
-export default function Today({ data, loading, reload, profile, goTasks }) {
+export default function Today({ data, loading, reload, offline, updatedAt, profile, goTasks }) {
   const t = useTheme();
   const d = data ?? {};
   const ctx = userContext(profile ?? {});
@@ -63,7 +64,11 @@ export default function Today({ data, loading, reload, profile, goTasks }) {
         </View>
       </View>
 
-      {d.errors?.length > 0 && <Notice>Some parts couldn’t load. Pull down to retry.</Notice>}
+      {offline
+        ? <Notice>You’re offline. Showing what Praxio had {timeAgo(updatedAt)}; pull down to refresh.</Notice>
+        : d.errors?.length > 0
+          ? <Notice>Some parts couldn’t load. Pull down to retry.</Notice>
+          : updatedAt ? <T size={13} color={t.c.text3}>{loading ? 'Refreshing…' : `Updated ${timeAgo(updatedAt)}`}</T> : null}
 
       <Card style={{ gap: 14, marginTop: 6 }}>
         <Chip tone="info">Your next move</Chip>

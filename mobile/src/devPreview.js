@@ -44,9 +44,17 @@ function build() {
       title: m1.project?.title ?? 'Starter project', description: m1.project?.brief ?? '', requirements: m1.project?.requirements ?? [],
       skills: m1.skills,
     }],
-    submissions: [], evaluations: [], skills: [], rewards: [],
+    submissions: [], skills: [], rewards: [{ points: 10 }],
+    evaluations: [{
+      id: 'preview-eval', challenge_id: 'preview-done', total_score: 58, passed: false, evaluated_at: '2026-10-07T10:00:00Z',
+      feedback: 'Solid start: the core logic works, but the README doesn’t explain how to run it.',
+      strengths: ['Clear function names', 'Handles invalid marks'], improvements: ['Add a README with run steps', 'Add two tests'],
+    }],
   };
-  void m2;
+  dev.challenges.push({
+    id: 'preview-done', course_id: course.id, module_id: m2.id, status: 'needs_improvement',
+    title: m2.project?.title ?? 'Second project', description: m2.project?.brief ?? '', requirements: m2.project?.requirements ?? [], skills: m2.skills,
+  });
   const progress = deriveProgress(dev);
   const decision = decide(buildDecisionInputs({ profile, recs, inputs, dev, marketById: {}, academicRecords: null }));
   return {
@@ -58,7 +66,7 @@ function build() {
 
 export function usePreviewData() {
   const [data] = useState(build);
-  return { data, loading: false, error: null, reload: async () => {} };
+  return { data, loading: false, error: null, offline: false, updatedAt: Date.now(), reload: async () => {} };
 }
 
 export const PREVIEW_SESSION = { user: { id: 'preview', email: 'asha@example.com' } };

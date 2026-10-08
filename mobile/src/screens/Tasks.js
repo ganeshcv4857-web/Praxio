@@ -5,11 +5,16 @@ import { COURSE_BY_ID } from '../../../app/src/lib/development/catalog.js';
 import { completeModuleFlow, submitAndEvaluate } from '../../../app/src/lib/development/service.js';
 import { PASS_SCORE } from '../../../app/src/lib/development/config.js';
 import { WEB_URL } from '../supabaseClient.js';
+import { haptic } from '../haptics.js';
 import { font, useTheme } from '../theme.js';
 import { Button, Card, Chip, Headline, Label, Notice, Screen, T } from '../ui.js';
 
 // Quick actions: submit a project's GitHub repo, mark a module complete.
 // Both use the website's own flows (service.js), so scoring and rewards are identical.
+
+// Evaluation text can be AI-written: only ever render plain strings.
+const asText = (v) => (typeof v === 'string' ? v.trim() : typeof v?.text === 'string' ? v.text.trim() : '');
+const textList = (v) => (Array.isArray(v) ? v.map(asText).filter(Boolean) : []);
 
 const confirm = (title, message) => new Promise((resolve) => {
   if (Platform.OS === 'web') { resolve(typeof window !== 'undefined' ? window.confirm(`${title}\n\n${message}`) : true); return; }
@@ -46,7 +51,17 @@ export default function Tasks({ data, loading, reload, userId }) {
   const dev = d.dev;
   const challenges = dev?.challenges ?? [];
   const todo = challenges.filter((c) => c.status === 'open' || c.status === 'needs_improvement');
-  const passed = challenges.filter((c) => c.status === 'passed');
+  // Latest evaluation per project, newest first.
+  const evaluations = dev?.evaluations ?? [];
+  const history = challenges
+    .map((challenge) => ({
+      challenge,
+      evaluation: evaluations.filter((e) => e.challenge_id === challenge.id)
+        .sort((a, b) => String(b.evaluated_at ?? '').localeCompare(String(a.evaluated_at ?? '')))[0],
+    }))
+    .filter((h) => h.evaluation)
+    .sort((a, b) => String(b.evaluation.evaluated_at ?? '').localeCompare(String(a.evaluation.evaluated_at ?? '')))
+    .slice(0, 6);
   const current = (d.stages ?? []).find((s) => s.kind === 'course' && s.status === 'current');
   const course = current ? COURSE_BY_ID[current.courseId] : null;
   const nextModules = course ? course.modules.filter((m) => !d.progress?.isDone?.(course.id, m.id)).slice(0, 3) : [];
@@ -59,8 +74,10 @@ export default function Tasks({ data, loading, reload, userId }) {
     try {
       const challenge = await completeModuleFlow({ userId, careerId: d.chosen.careerId, courseId: course.id, moduleId: m.id, dev });
       await reload();
+      haptic('success');
       notify('Module learned', challenge?.title ? `Project unlocked: ${challenge.title}. Submit it to prove the skill.` : 'Nice work.');
     } catch (e) {
+      haptic('error');
       notify('Couldn’t save', e?.message ?? 'Please try again.');
     } finally {
       setBusyModule(null);
@@ -83,7 +100,14 @@ export default function Tasks({ data, loading, reload, userId }) {
           <Button title="Submit GitHub repo →" onPress={() => setSubmitting(c)} />
         </Card>
       ))}
-      {passed.length > 0 && <T size={14} color={t.c.text3}>{passed.length} project{passed.length === 1 ? '' : 's'} already passed.</T>}
+      {history.length > 0 && (
+        <>
+          <Label>Your results</Label>
+          {history.map(({ challenge, evaluation }) => (
+            <ResultRow key={challenge.id} challenge={challenge} evaluation={evaluation} onResubmit={() => setSubmitting(challenge)} />
+          ))}
+        </>
+      )}
 
       <Label>{course ? `Up next · ${course.title}` : 'Modules'}</Label>
       {!course ? (
@@ -134,8 +158,12 @@ function SubmitSheet({ challenge, onClose, onSubmit }) {
   const submit = async () => {
     setBusy(true); setError(''); setErrors({});
     try {
-      setResult(await onSubmit(form));
+      const r = await onSubmit(form);
+      const ok = r?.evaluation?.passed ?? (Number.isFinite(r?.evaluation?.total_score) && r.evaluation.total_score >= PASS_SCORE);
+      haptic(ok ? 'success' : 'error');
+      setResult(r);
     } catch (e) {
+      haptic('error');
       if (e?.fieldErrors) setErrors(e.fieldErrors);
       else setError(e?.message ?? 'Submission failed. Please try again.');
     } finally {
@@ -173,8 +201,8 @@ function SubmitSheet({ challenge, onClose, onSubmit }) {
               <Chip tone={ok ? 'good' : 'warn'}>{ok ? 'Passed: skill demonstrated' : 'Needs improvement'}</Chip>
               {Number.isFinite(score) && <T kind="semibold" size={40}>{score}<T size={18} color={t.c.text3}>/100</T></T>}
               {result.pointsAwarded > 0 && <T color={t.c.text2}>+{result.pointsAwarded} points</T>}
-              {ev?.feedback ? <T color={t.c.text2}>{ev.feedback}</T> : null}
-              {ev?.improvements?.length ? <T size={14} color={t.c.text3}>To improve: {ev.improvements.slice(0, 3).join(' · ')}</T> : null}
+              {asText(ev?.feedback) ? <T color={t.c.text2}>{asText(ev.feedback)}</T> : null}
+              {textList(ev?.improvements).length ? <T size={14} color={t.c.text3}>To improve: {textList(ev.improvements).slice(0, 3).join(' · ')}</T> : null}
               <Button title="Done" onPress={close} />
             </Card>
           ) : (
@@ -196,5 +224,43 @@ function SubmitSheet({ challenge, onClose, onSubmit }) {
         </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
+  );
+}
+
+function ResultRow({ challenge, evaluation, onResubmit }) {
+  const t = useTheme();
+  const [open, setOpen] = useState(false);
+  const score = evaluation.total_score;
+  const ok = evaluation.passed ?? (Number.isFinite(score) && score >= PASS_SCORE);
+  const list = textList;
+  return (
+    <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => { haptic(); setOpen(!open); }}>
+      <Card style={{ gap: 10 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <T kind="medium" size={16} style={{ flex: 1 }} numberOfLines={open ? undefined : 1}>{challenge.title}</T>
+          <Chip tone={ok ? 'good' : 'warn'}>{ok ? 'Passed' : 'Needs work'}{Number.isFinite(score) ? ` · ${score}` : ''}</Chip>
+        </View>
+        {open && (
+          <View style={{ gap: 10 }}>
+            {asText(evaluation.feedback) ? <T size={15} color={t.c.text2}>{asText(evaluation.feedback)}</T> : null}
+            {list(evaluation.strengths).length > 0 && (
+              <View style={{ gap: 4 }}>
+                <Label>Strengths</Label>
+                {list(evaluation.strengths).slice(0, 3).map((x) => <T key={x} size={14}>✓ {x}</T>)}
+              </View>
+            )}
+            {list(evaluation.improvements).length > 0 && (
+              <View style={{ gap: 4 }}>
+                <Label>To improve</Label>
+                {list(evaluation.improvements).slice(0, 3).map((x) => <T key={x} size={14} color={t.c.text2}>→ {x}</T>)}
+              </View>
+            )}
+            {!asText(evaluation.feedback) && !list(evaluation.strengths).length && !list(evaluation.improvements).length
+              ? <T size={14} color={t.c.text3}>No written feedback for this evaluation.</T> : null}
+            {!ok && <Button title="Resubmit →" onPress={onResubmit} />}
+          </View>
+        )}
+      </Card>
+    </Pressable>
   );
 }

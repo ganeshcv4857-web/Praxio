@@ -6,6 +6,8 @@ import { useFonts } from 'expo-font';
 import { Geist_400Regular, Geist_500Medium, Geist_600SemiBold, Geist_700Bold } from '@expo-google-fonts/geist';
 import { InstrumentSerif_400Regular_Italic } from '@expo-google-fonts/instrument-serif';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SplashScreen from 'expo-splash-screen';
+import { haptic } from './src/haptics.js';
 import { isConfigured, supabase } from './src/supabaseClient.js';
 import { PALETTES, ThemeContext, useTheme } from './src/theme.js';
 import { usePraxioData } from './src/data.js';
@@ -25,6 +27,10 @@ const THEME_KEY = 'praxio-theme';
 const useData = PREVIEW ? usePreviewData : usePraxioData;
 const TABS = [['today', 'Today'], ['tasks', 'Tasks'], ['career', 'Career'], ['profile', 'Profile']];
 
+// Keep the native splash up until fonts are ready (hidden in App; never blocks if this fails).
+SplashScreen.preventAutoHideAsync().catch(() => {});
+try { SplashScreen.setOptions({ duration: 300, fade: true }); } catch { /* older native runtime */ }
+
 export default function App() {
   const scheme = useColorScheme();
   const [mode, setModeState] = useState('system');
@@ -33,7 +39,17 @@ export default function App() {
   useEffect(() => {
     AsyncStorage.getItem(THEME_KEY).then((v) => { if (v === 'light' || v === 'dark' || v === 'system') setModeState(v); }).catch(() => {});
   }, []);
-  const setMode = (m) => { setModeState(m); AsyncStorage.setItem(THEME_KEY, m).catch(() => {}); };
+  const setMode = (m) => { haptic(); setModeState(m); AsyncStorage.setItem(THEME_KEY, m).catch(() => {}); };
+
+  const ready = Boolean(fontsLoaded || fontError);
+  useEffect(() => {
+    if (ready) SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
+  useEffect(() => {
+    // Safety net: never leave the splash up if fonts hang.
+    const id = setTimeout(() => SplashScreen.hideAsync().catch(() => {}), 4000);
+    return () => clearTimeout(id);
+  }, []);
 
   const dark = mode === 'system' ? scheme === 'dark' : mode === 'dark';
   const theme = useMemo(() => ({
@@ -85,7 +101,7 @@ function Signedin({ session }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState('today');
-  const { data, loading, error, reload } = useData(session.user.id);
+  const { data, loading, error, reload, offline, updatedAt } = useData(session.user.id);
 
   if (!data && loading) return <Loading label="Loading your position…" />;
   if (!data) {
@@ -97,7 +113,7 @@ function Signedin({ session }) {
     );
   }
 
-  const props = { data, loading, reload, userId: session.user.id, profile: data.profile };
+  const props = { data, loading, reload, offline, updatedAt, userId: session.user.id, profile: data.profile };
   return (
     <View style={{ flex: 1 }}>
       <ErrorBoundary key={tab} onRetry={reload}>
@@ -117,7 +133,7 @@ function Signedin({ session }) {
         {TABS.map(([id, label]) => {
           const on = tab === id;
           return (
-            <Pressable key={id} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => setTab(id)}
+            <Pressable key={id} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => { if (!on) haptic(); setTab(id); }}
               style={{ flex: 1, minHeight: 48, borderRadius: 999, alignItems: 'center', justifyContent: 'center', backgroundColor: on ? t.c.accent : 'transparent' }}>
               <T kind={on ? 'medium' : 'regular'} size={14} color={on ? t.c.onAccent : t.c.text2}>{label}</T>
             </Pressable>

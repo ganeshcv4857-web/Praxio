@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { formatLinkCode, normalizeLinkCode, parseLinkPayload } from '../../../app/supabase/functions/_shared/deviceLink.js';
 import { supabase, WEB_URL } from '../supabaseClient.js';
+import { haptic } from '../haptics.js';
 import { font, useTheme } from '../theme.js';
 import { Button, Headline, Notice, T } from '../ui.js';
 
@@ -47,13 +48,31 @@ export default function Login() {
     setError('');
     try {
       await connectWithCode(raw);
+      haptic('success');
       // Success: the auth listener in App.js switches to the signed-in screens.
     } catch (e) {
+      haptic('error');
       setError(e?.message ?? 'Couldn’t connect. Check your internet and try again.');
     } finally {
       setBusy(false);
     }
   };
+
+  // Opened from a pairing link (praxio://link?code=…, e.g. the website QR scanned with the
+  // phone's own camera in an installed build): pair straight away.
+  useEffect(() => {
+    const handle = (url) => {
+      if (typeof url !== 'string' || !/[?&]code=/.test(url)) return;
+      const c = parseLinkPayload(url);
+      if (!c) return;
+      setMode('code');
+      setCode(formatLinkCode(c));
+      connect(url);
+    };
+    Linking.getInitialURL().then(handle).catch(() => {});
+    const sub = Linking.addEventListener('url', ({ url }) => handle(url));
+    return () => sub?.remove?.();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ready = Boolean(normalizeLinkCode(code));
 
