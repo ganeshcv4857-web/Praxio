@@ -9,7 +9,7 @@ export default function Logo({ height = 40, className = '' }) {
       className={`inline-block select-none font-bold leading-none ${className}`}
       style={{ fontFamily: "'Geist', system-ui, sans-serif", fontSize: Math.round(height * 0.6), letterSpacing: '-0.065em' }}
     >
-      praxio<span className="text-[#8FA6FF]">.</span>
+      praxio<span style={{ color: 'var(--accent, #E9DFCC)' }}>.</span>
     </span>
   );
 }

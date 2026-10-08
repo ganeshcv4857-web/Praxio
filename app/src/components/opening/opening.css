@@ -1,17 +1,17 @@
 /* Praxio public pages (the opening `.pxo`, the landing `.pxl`).
    Shared theme tokens: light by default, `.dark` for dark. */
 .pxl {
-  --bg: #F4F2EE; --surface: #FFFFFF; --surface-2: #ECE9E3; --text: #141519; --text-2: #55575E; --text-3: #8A8C92;
-  --line: rgba(20,21,25,.10); --line-2: rgba(20,21,25,.18);
-  --accent: #2F54EB; --accent-soft: rgba(47,84,235,.10); --on-accent: #FFFFFF; --success: #1F8A5B; --warning: #B86E00;
-  --shadow: 0 1px 2px rgba(20,21,25,.05), 0 18px 50px -18px rgba(20,21,25,.18);
+  --bg: #F2ECE1; --surface: #FFFFFF; --surface-2: #EAE2D4; --text: #1C1B19; --text-2: #5A554D; --text-3: #8C857A;
+  --line: rgba(28,27,25,.10); --line-2: rgba(28,27,25,.18);
+  --accent: #2A2826; --accent-soft: rgba(42,40,38,.08); --on-accent: #FBF8F2; --success: #1F8A5B; --warning: #B86E00;
+  --shadow: 0 1px 2px rgba(60,48,30,.06), 0 18px 50px -18px rgba(60,48,30,.20);
   min-height: 100vh; font-family: 'Geist', system-ui, sans-serif; background: var(--bg); color: var(--text);
   transition: background .6s ease, color .6s ease;
 }
 .pxl.dark {
-  --bg: #0E0F12; --surface: #17181C; --surface-2: #202126; --text: #F2F1EE; --text-2: #A6A7AD; --text-3: #72737A;
+  --bg: #161615; --surface: #1F1F1E; --surface-2: #2A2A28; --text: #F1EEE8; --text-2: #A9A59E; --text-3: #75726C;
   --line: rgba(255,255,255,.08); --line-2: rgba(255,255,255,.16);
-  --accent: #8FA6FF; --accent-soft: rgba(143,166,255,.13); --on-accent: #0E0F12; --success: #5BC79A; --warning: #E2A84B;
+  --accent: #E9DFCC; --accent-soft: rgba(233,223,204,.10); --on-accent: #161615; --success: #5BC79A; --warning: #E2A84B;
   --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 24px 60px -20px rgba(0,0,0,.7);
 }
 .pxl button { font-family: inherit; cursor: pointer; }
@@ -30,28 +30,28 @@
 @media (prefers-reduced-motion: reduce) { .pxl .orbit, .pxl .orbit-r, .pxl .halo { animation: none; } }
 
 .pxo {
-  --bg: #F4F2EE; --surface: #FFFFFF; --surface-2: #ECE9E3; --text: #141519; --text-2: #55575E; --text-3: #8A8C92;
-  --line: rgba(20,21,25,.10); --line-2: rgba(20,21,25,.18);
-  --accent: #2F54EB; --accent-soft: rgba(47,84,235,.10); --on-accent: #FFFFFF;
-  --shadow: 0 1px 2px rgba(20,21,25,.05), 0 18px 50px -18px rgba(20,21,25,.18);
-  --fig-top: #2F54EB; --fig-top-2: #2443C4; --fig-pants: #26282E; --fig-pants-2: #3C3F48; --shoe: #141519; --sole: #F4F2EE;
+  --bg: #F2ECE1; --surface: #FFFFFF; --surface-2: #EAE2D4; --text: #1C1B19; --text-2: #5A554D; --text-3: #8C857A;
+  --line: rgba(28,27,25,.10); --line-2: rgba(28,27,25,.18);
+  --accent: #2A2826; --accent-soft: rgba(42,40,38,.08); --on-accent: #FBF8F2;
+  --shadow: 0 1px 2px rgba(60,48,30,.06), 0 18px 50px -18px rgba(60,48,30,.20);
+  --fig-top: #3A3836; --fig-top-2: #2A2826; --fig-pants: #8A7558; --fig-pants-2: #6E5D45; --shoe: #1C1B19; --sole: #F2ECE1;
   --skin: #C08E6C; --skin-2: #A97A5C; --hair: #1C1B1F; --blush: rgba(230,110,110,.35); --pack: #F0A33A; --pack-2: #C9821F;
   --book1: #F0A33A; --book2: #E4DED3; --book3: #2B2D33; --device: #C8CAD0; --device-2: #B4B7BE;
   --desk: #DCD3C6; --desk-leg: #B9AE9F; --lamp: #141519; --lamp-light: rgba(255,190,100,.32); --pot: #C46A45; --leaf: #3F8F5B; --leaf-2: #2F7448;
-  --pool: rgba(47,84,235,.07); --contact: rgba(20,21,25,.16); --screen: #16171B; --dim: rgba(20,21,25,.16);
+  --pool: rgba(150,120,80,.08); --contact: rgba(20,21,25,.16); --screen: #16171B; --dim: rgba(20,21,25,.16);
   position: fixed; inset: 0; overflow: hidden;
   font-family: 'Geist', system-ui, sans-serif; background: var(--bg); color: var(--text);
   transition: background .6s ease, color .6s ease;
 }
 .pxo.dark {
-  --bg: #0E0F12; --surface: #17181C; --surface-2: #202126; --text: #F2F1EE; --text-2: #A6A7AD; --text-3: #72737A;
+  --bg: #161615; --surface: #1F1F1E; --surface-2: #2A2A28; --text: #F1EEE8; --text-2: #A9A59E; --text-3: #75726C;
   --line: rgba(255,255,255,.08); --line-2: rgba(255,255,255,.16);
-  --accent: #8FA6FF; --accent-soft: rgba(143,166,255,.13); --on-accent: #0E0F12;
+  --accent: #E9DFCC; --accent-soft: rgba(233,223,204,.10); --on-accent: #161615;
   --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 24px 60px -20px rgba(0,0,0,.7);
-  --fig-top: #7C93F5; --fig-top-2: #5F76DA; --fig-pants: #C9C7C0; --fig-pants-2: #9C9A94; --shoe: #F2F1EE; --sole: #8FA6FF;
+  --fig-top: #D8CCB6; --fig-top-2: #BFB29B; --fig-pants: #C9C7C0; --fig-pants-2: #9C9A94; --shoe: #F2F1EE; --sole: #E9DFCC;
   --pack: #E39B3A; --pack-2: #B8791F; --book2: #5B5E67; --book3: #E4DED3; --device: #4A4D55; --device-2: #3A3C43;
   --desk: #25262B; --desk-leg: #34363C; --lamp: #D9D8D3; --lamp-light: rgba(255,200,120,.16); --pot: #B5603D; --leaf: #4FA36C; --leaf-2: #3B8655;
-  --pool: rgba(143,166,255,.08); --contact: rgba(0,0,0,.55); --screen: #050506; --dim: rgba(0,0,0,.6);
+  --pool: rgba(233,223,204,.05); --contact: rgba(0,0,0,.55); --screen: #0C0C0B; --dim: rgba(0,0,0,.6);
 }
 .pxo *, .pxo *::before, .pxo *::after { box-sizing: border-box; }
 .pxo button { font-family: inherit; cursor: pointer; }

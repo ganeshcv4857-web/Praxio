@@ -226,7 +226,7 @@ export default function App() {
     const logIn = () => { setAuthTab('login'); setScreen('auth'); };
     if (aboutOpen) return <Landing demo={!isConfigured} onSignUp={signUp} onLogIn={logIn} onHome={() => setAboutOpen(false)} />;
     return (
-      <Suspense fallback={<div className="min-h-screen bg-[#F4F2EE] dark:bg-[#0E0F12]" />}>
+      <Suspense fallback={<div className="min-h-screen bg-[#F2ECE1] dark:bg-[#161615]" />}>
         <Opening
           onContinue={(stageId) => { saveEntryStage(stageId); signUp(); }}
           onSignIn={isConfigured ? logIn : null}
@@ -388,7 +388,7 @@ export default function App() {
 
 function DemoBanner() {
   return (
-    <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-200">
+    <div className="mb-6 rounded-2xl px-4 py-2 text-xs" style={{ background: 'var(--surface-2)', color: 'var(--text-2)' }}>
       Demo mode: no Supabase configured. Data stays in this browser and explanations come from the
       score breakdown instead of the AI. &ldquo;Log out&rdquo; resets the demo.
     </div>
