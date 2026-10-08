@@ -19,6 +19,7 @@ export default function Advisor({ userId, context, focusDomain, clearFocus }) {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
   const endRef = useRef(null);
   // Set when send() creates a session, so the load effect doesn't clobber in-flight messages.
   const justCreated = useRef(null);
@@ -81,78 +82,86 @@ export default function Advisor({ userId, context, focusDomain, clearFocus }) {
 
   const topName = context.shortlist[0]?.name;
 
+  const empty = messages.length === 0 && !sending;
+
   return (
-    <div className="grid gap-4 md:grid-cols-[220px_1fr]">
-      <aside className="space-y-2">
-        <button className="btn-primary w-full" onClick={() => setActiveId(null)}>New conversation</button>
-        <ul className="space-y-1">
+    <div className="mx-auto flex min-h-[calc(100vh-180px)] max-w-3xl flex-col">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-4 pt-2">
+        <span className="text-sm text-slate-500">Advisor</span>
+        <div className="flex gap-2">
+          {sessions.length > 0 && (
+            <button type="button" onClick={() => setShowHistory(!showHistory)} aria-expanded={showHistory}
+              className="min-h-[40px] rounded-full bg-slate-900 px-4 text-sm text-slate-300 shadow-[var(--shadow)] hover:text-slate-100">
+              History ({sessions.length})
+            </button>
+          )}
+          {!empty && (
+            <button type="button" onClick={() => { setActiveId(null); setShowHistory(false); }}
+              className="min-h-[40px] rounded-full bg-slate-900 px-4 text-sm text-slate-300 shadow-[var(--shadow)] hover:text-slate-100">
+              New chat
+            </button>
+          )}
+        </div>
+      </div>
+
+      {showHistory && (
+        <ul className="mb-6 rounded-3xl bg-slate-900 p-2 shadow-[var(--shadow)]">
           {sessions.map((s) => (
             <li key={s.id} className="group flex items-center">
-              <button
-                onClick={() => setActiveId(s.id)}
-                className={`min-w-0 flex-1 truncate rounded-lg px-3 py-2 text-left text-sm ${
-                  s.id === activeId ? 'bg-slate-800 text-white' : 'text-slate-400 hover:bg-slate-900'
-                }`}
-              >
+              <button type="button" onClick={() => { setActiveId(s.id); setShowHistory(false); }}
+                className={`min-h-[44px] min-w-0 flex-1 truncate rounded-2xl px-4 text-left text-[15px] ${s.id === activeId ? 'bg-slate-800 text-slate-100' : 'text-slate-300 hover:bg-slate-800/60'}`}>
                 {s.title}
               </button>
-              <button
-                onClick={() => remove(s.id)}
-                className="px-2 text-xs text-slate-600 opacity-0 hover:text-rose-300 group-hover:opacity-100"
-                aria-label="Delete conversation"
-              >
-                ✕
-              </button>
+              <button type="button" onClick={() => remove(s.id)} aria-label="Delete conversation"
+                className="grid h-10 w-10 place-items-center rounded-full text-slate-500 opacity-60 hover:text-rose-300 group-hover:opacity-100">✕</button>
             </li>
           ))}
         </ul>
-      </aside>
+      )}
 
-      <section className="card flex min-h-[70vh] flex-col p-0">
-        <div className="flex-1 space-y-4 overflow-y-auto p-5">
-          {messages.length === 0 && !sending && (
-            <div className="py-10 text-center">
-              <h2 className="text-lg font-semibold">Ask about your matches</h2>
-              <p className="mt-1 text-sm text-slate-400">The advisor sees your answers and your scored shortlist, nothing else.</p>
-              <div className="mx-auto mt-6 grid max-w-lg gap-2 sm:grid-cols-2">
-                {starters(topName).map((q) => (
-                  <button key={q} onClick={() => send(q)} className="rounded-xl border border-slate-700 p-3 text-left text-sm text-slate-300 hover:bg-slate-800">
-                    {q}
-                  </button>
-                ))}
-              </div>
+      <div className="flex-1 space-y-5 pb-6">
+        {empty && (
+          <div className="pb-6 pt-10">
+            <h1 className="text-[clamp(36px,4.6vw,56px)] font-normal leading-[1.02] tracking-[-0.045em]">
+              Ask anything about <span className="ser text-indigo-300">your matches.</span>
+            </h1>
+            <p className="mt-4 text-[17px] text-slate-400">The advisor sees your answers and your scored shortlist, nothing else.</p>
+            <div className="mt-8 flex flex-wrap gap-2">
+              {starters(topName).map((q) => (
+                <button key={q} type="button" onClick={() => send(q)}
+                  className="min-h-[46px] rounded-full bg-slate-900 px-5 text-left text-[15px] text-slate-200 shadow-[var(--shadow)] transition hover:bg-slate-800">
+                  {q}
+                </button>
+              ))}
             </div>
-          )}
-          {messages.map((m) =>
-            m.role === 'user' ? (
-              <div key={m.id} className="ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-indigo-500 px-4 py-2 text-sm text-on-accent">
-                {m.content}
-              </div>
-            ) : (
-              <div key={m.id} className="max-w-[92%] rounded-2xl rounded-bl-sm bg-slate-800/70 px-4 py-3">
-                <Markdown content={m.content} />
-              </div>
-            )
-          )}
-          {sending && <div className="text-sm text-slate-500">Thinking…</div>}
-          {error && <p className="rounded-lg bg-rose-500/10 px-3 py-2 text-sm text-rose-300">{error}</p>}
-          <div ref={endRef} />
-        </div>
-        <form
-          onSubmit={(e) => { e.preventDefault(); send(input); }}
-          className="flex gap-2 border-t border-slate-800 p-3"
-        >
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input); } }}
-            rows={2}
-            placeholder="Ask anything about your career matches…"
-            className="input flex-1 resize-none"
-          />
-          <button className="btn-primary self-end" disabled={sending || !input.trim()}>Send</button>
-        </form>
-      </section>
+          </div>
+        )}
+        {messages.map((m) =>
+          m.role === 'user' ? (
+            <div key={m.id} className="ml-auto w-fit max-w-[85%] rounded-3xl rounded-br-lg bg-indigo-500 px-5 py-3 text-[15px] text-on-accent">{m.content}</div>
+          ) : (
+            <div key={m.id} className="max-w-[92%] rounded-3xl rounded-bl-lg bg-slate-900 px-5 py-4 shadow-[var(--shadow)]"><Markdown content={m.content} /></div>
+          )
+        )}
+        {sending && <div className="text-sm text-slate-500">Thinking…</div>}
+        {error && <p className="rounded-2xl bg-rose-500/10 px-4 py-3 text-sm text-rose-300">{error}</p>}
+        <div ref={endRef} />
+      </div>
+
+      <form onSubmit={(e) => { e.preventDefault(); send(input); }}
+        className="sticky bottom-24 flex items-end gap-2 rounded-[28px] bg-slate-900 p-2 shadow-[var(--shadow)] lg:bottom-6">
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(input); } }}
+          rows={1}
+          aria-label="Your question"
+          placeholder="Ask anything about your career matches…"
+          className="max-h-40 min-h-[48px] flex-1 resize-none bg-transparent px-4 py-3 text-[15px] text-slate-100 outline-none placeholder:text-slate-500"
+        />
+        <button type="submit" disabled={sending || !input.trim()} aria-label="Send"
+          className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-indigo-500 text-on-accent transition disabled:opacity-40">→</button>
+      </form>
     </div>
   );
 }

@@ -9,31 +9,17 @@ import {
   DEMAND_LABEL, MARKET_INTELLIGENCE_TTL_DAYS, TREND_LABEL, compareCareers, freshness, marketSkillGap,
   personalOpportunitiesThreats, personalSummary,
 } from '../../lib/marketInsights.js';
+import { Btn, Fact, More, Panel, PageHead, Row, Rows, Status } from '../ui/kit.jsx';
 
 // Module 4: Market Intelligence. Research is only requested when the student asks;
 // everything else renders from cached, validated records.
 
-const DEMAND_TONE = {
-  very_high: 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300',
-  high: 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300',
-  moderate: 'border-amber-400/40 bg-amber-500/10 text-amber-300',
-  mixed: 'border-amber-400/40 bg-amber-500/10 text-amber-300',
-  low: 'border-rose-400/40 bg-rose-500/10 text-rose-300',
-  unknown: 'border-slate-700 bg-slate-800 text-slate-300',
-};
+const DEMAND_TONE = { very_high: 'good', high: 'good', moderate: 'warn', mixed: 'warn', low: 'bad', unknown: 'muted' };
 const STATUS = {
-  demonstrated: { icon: '✓', label: 'Demonstrated', tone: 'text-emerald-300' },
-  learned: { icon: '◐', label: 'Learned, not yet proven', tone: 'text-amber-300' },
-  missing: { icon: '○', label: 'Missing', tone: 'text-slate-400' },
+  demonstrated: { label: 'Demonstrated', tone: 'good' },
+  learned: { label: 'Learned, not proven', tone: 'warn' },
+  missing: { label: 'Missing', tone: 'muted' },
 };
-
-function DemandBadge({ level, trend }) {
-  return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${DEMAND_TONE[level]}`}>
-      {DEMAND_LABEL[level]}{TREND_LABEL[trend] ? ` · ${TREND_LABEL[trend]}` : ''}
-    </span>
-  );
-}
 
 /** [1][2] superscript citations linking to the record's sources. */
 function Cite({ ids, sources }) {
@@ -42,105 +28,25 @@ function Cite({ ids, sources }) {
     <sup className="ml-0.5 whitespace-nowrap">
       {ids.map((id) => {
         const s = sources.find((x) => x.id === id);
-        return s ? (
-          <a key={id} href={s.url} target="_blank" rel="noreferrer" title={s.title} className="mx-px text-[10px] font-semibold text-indigo-300 hover:underline">[{id}]</a>
-        ) : null;
+        return s ? <a key={id} href={s.url} target="_blank" rel="noreferrer" title={s.title} className="mx-px text-[10px] font-semibold text-indigo-300 hover:underline">[{id}]</a> : null;
       })}
     </sup>
   );
 }
 
 function ClaimList({ items, sources, empty = 'Not found in current sources.' }) {
-  if (!items?.length) return <p className="text-sm text-slate-500">{empty}</p>;
+  if (!items?.length) return <p className="text-slate-500">{empty}</p>;
+  return <ul className="space-y-2 text-[15px] text-slate-300">{items.map((c, i) => <li key={i}>{c.text}<Cite ids={c.sources} sources={sources} /></li>)}</ul>;
+}
+
+function InsightList({ items, sources }) {
+  if (!items.length) return <p className="text-slate-500">None found in current sources.</p>;
   return (
-    <ul className="space-y-1.5 text-sm text-slate-300">
-      {items.map((c, i) => <li key={i} className="flex gap-2"><span className="text-slate-500">•</span><span>{c.text}<Cite ids={c.sources} sources={sources} /></span></li>)}
+    <ul className="space-y-3">
+      {items.map((o, i) => (
+        <li key={i} className="text-[15px] text-slate-300">{o.text}<Cite ids={o.sources} sources={sources} />{o.basis !== 'market' && <span className="block text-sm text-slate-500">Based on {o.basis}</span>}</li>
+      ))}
     </ul>
-  );
-}
-
-function Section({ title, children, className = '' }) {
-  return (
-    <section className={`card ${className}`}>
-      <h3 className="mb-3 font-semibold">{title}</h3>
-      {children}
-    </section>
-  );
-}
-
-function Comparison({ rows, selected, onSelect }) {
-  return (
-    <section className="card p-0">
-      <div className="p-5 pb-3">
-        <h2 className="font-semibold">Fit × Feasibility × Market</h2>
-        <p className="text-xs text-slate-400">Fit and Feasibility come from your Praxio results. Market demand comes from cached, source-backed research.</p>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[620px] text-sm">
-          <thead>
-            <tr className="border-y border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500">
-              <th className="px-5 py-2 font-semibold">Career</th>
-              <th className="px-3 py-2 text-right font-semibold">Fit</th>
-              <th className="px-3 py-2 text-right font-semibold">Feasibility</th>
-              <th className="px-3 py-2 font-semibold">Market demand</th>
-              <th className="px-5 py-2 font-semibold">Research</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.careerId} className={`border-b border-slate-800/70 last:border-0 ${r.careerId === selected ? 'bg-indigo-500/5' : ''}`}>
-                <td className="px-5 py-3 font-medium">
-                  <button className="text-left hover:text-indigo-300" onClick={() => onSelect(r.careerId)}>{r.name}</button>
-                </td>
-                <td className="px-3 py-3 text-right tabular-nums">{r.fit}%</td>
-                <td className="px-3 py-3 text-right tabular-nums">
-                  {r.feasibility != null ? <span>{r.feasibilityCategory.emoji} {r.feasibility}%</span> : <span className="text-slate-500">—</span>}
-                </td>
-                <td className="px-3 py-3">{r.demand ? <DemandBadge level={r.demand} trend={r.trend} /> : <span className="text-xs text-slate-500">Not researched</span>}</td>
-                <td className="px-5 py-3 text-xs">
-                  {r.researchedAt
-                    ? <span className={r.fresh ? 'text-slate-400' : 'text-amber-300'}>{new Date(r.researchedAt).toLocaleDateString()}{r.fresh ? '' : ' · outdated'}</span>
-                    : <button className="font-semibold text-indigo-300 hover:text-indigo-200" onClick={() => onSelect(r.careerId)}>Research →</button>}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  );
-}
-
-function SkillGap({ gap, sources }) {
-  if (!gap.items.length) return <p className="text-sm text-slate-500">The research did not name specific skills.</p>;
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full min-w-[560px] text-sm">
-        <thead>
-          <tr className="border-b border-slate-800 text-left text-xs uppercase tracking-wide text-slate-500">
-            <th className="py-2 pr-3 font-semibold">Market skill</th>
-            <th className="px-3 py-2 font-semibold">Type</th>
-            <th className="px-3 py-2 font-semibold">You</th>
-            <th className="py-2 pl-3 font-semibold">Learn it with</th>
-          </tr>
-        </thead>
-        <tbody>
-          {gap.items.map((i) => (
-            <tr key={i.skill} className="border-b border-slate-800/60 last:border-0 align-top">
-              <td className="py-2 pr-3 font-medium">{i.skill}<Cite ids={i.sources} sources={sources} /></td>
-              <td className="px-3 py-2 text-xs capitalize text-slate-400">{i.category}</td>
-              <td className={`px-3 py-2 text-xs font-semibold ${STATUS[i.status].tone}`}>{STATUS[i.status].icon} {STATUS[i.status].label}</td>
-              <td className="py-2 pl-3 text-xs text-slate-400">
-                {i.status === 'demonstrated' ? '—' : i.courses.length ? i.courses.map((c) => `${c.title} · ${c.module}`).join('; ') : 'No catalog course yet'}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p className="mt-3 text-xs text-slate-500">
-        <strong>Demonstrated</strong> means proven by a passed project evaluation. Completing a course module counts only as <strong>learned</strong>.
-      </p>
-    </div>
   );
 }
 
@@ -148,100 +54,97 @@ function Report({ record, gap, insights, summary, fresh, onRefresh, busy }) {
   const m = record.market;
   const s = record.sources;
   const byScope = (scope) => m.regions.filter((r) => r.scope === scope);
+  const missing = gap.items.filter((i) => i.status === 'missing');
+  const salary = [['Entry', m.salary.entry_level], ['Mid', m.salary.mid_level], ['Senior', m.salary.senior_level]];
+  const scopes = [['india', 'India'], ['global', 'Global'], ['remote', 'Remote']];
   return (
-    <div className="space-y-4">
-      <div className={`flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-2 text-xs ${fresh.fresh ? 'border-slate-800 text-slate-400' : 'border-amber-500/30 bg-amber-500/10 text-amber-200'}`}>
-        <span>{fresh.label} · cached research, not live · confidence {record.confidence}/100</span>
-        <button className="btn-ghost px-3 py-1 text-xs" disabled={busy} onClick={onRefresh}>{busy ? 'Researching…' : 'Refresh market intelligence'}</button>
+    <div>
+      <Panel className="relative overflow-hidden">
+        <div aria-hidden="true" className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-indigo-500/10" />
+        <div className="relative flex flex-wrap items-center gap-2">
+          <Status tone={DEMAND_TONE[m.demand.level]}>{DEMAND_LABEL[m.demand.level]} demand{TREND_LABEL[m.demand.trend] ? ` · ${TREND_LABEL[m.demand.trend]}` : ''}</Status>
+          <Status tone={fresh.fresh ? 'muted' : 'warn'}>{fresh.label}</Status>
+        </div>
+        <p className="relative mt-5 max-w-3xl text-[19px] leading-relaxed text-slate-100">{summary}</p>
+        {missing[0] && (
+          <p className="relative mt-4 text-slate-400">
+            Biggest gap: <span className="text-slate-100">{missing[0].skill}</span>{missing.length > 1 ? ` and ${missing.length - 1} more` : ''}.
+          </p>
+        )}
+        <div className="relative mt-6"><Btn kind="ghost" disabled={busy} onClick={onRefresh}>{busy ? 'Researching…' : 'Refresh research'}</Btn></div>
+      </Panel>
+
+      <div className="mt-8">
+        <Rows>
+          <Row title="Your skill gaps" sub={`${gap.counts.missing} missing · ${gap.counts.learned} learned · ${gap.counts.demonstrated} demonstrated`}>
+            {!gap.items.length ? <p className="text-slate-500">The research did not name specific skills.</p> : (
+              <ul className="divide-y divide-slate-800">
+                {gap.items.map((i) => (
+                  <li key={i.skill} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 py-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[15px] font-medium">{i.skill}<Cite ids={i.sources} sources={s} /></div>
+                      {i.status !== 'demonstrated' && (
+                        <div className="text-sm text-slate-500">{i.courses.length ? `Learn it with ${i.courses.map((c) => c.title).join(', ')}` : 'No catalog course yet'}</div>
+                      )}
+                    </div>
+                    <Status tone={STATUS[i.status].tone}>{STATUS[i.status].label}</Status>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-3 text-sm text-slate-500">Demonstrated means proven by a passed project. Finishing a module only counts as learned.</p>
+          </Row>
+          <Row title="Salary" sub={salary[0][1] ? `Entry ${salary[0][1].range}${m.salary.region ? ` · ${m.salary.region}` : ''}` : 'Not found in sources'}>
+            <ul className="space-y-2">
+              {salary.map(([k, b]) => (
+                <li key={k} className="flex justify-between gap-3">
+                  <span className="text-slate-400">{k}</span>
+                  {b ? <span className="tabular-nums">{b.range}<Cite ids={b.sources} sources={s} /></span> : <span className="text-slate-500">Not found</span>}
+                </li>
+              ))}
+            </ul>
+          </Row>
+          <Row title="Opportunities for you" sub={`${insights.opportunities.length} found`}><InsightList items={insights.opportunities} sources={s} /></Row>
+          <Row title="Risks to watch" sub={`${insights.threats.length} found`}><InsightList items={insights.threats} sources={s} /></Row>
+          <Row title="Where the jobs are" sub={scopes.filter(([x]) => byScope(x).length).map(([, l]) => l).join(' · ') || 'No evidence found'}>
+            <div className="grid gap-5 sm:grid-cols-3">
+              {scopes.map(([scope, label]) => (
+                <Fact key={scope} label={label}>
+                  {byScope(scope).length
+                    ? byScope(scope).map((r) => <span key={r.region} className="block">{r.region}<Cite ids={r.sources} sources={s} /></span>)
+                    : <span className="text-slate-500">No evidence found</span>}
+                </Fact>
+              ))}
+            </div>
+          </Row>
+          <Row title="Education & exams" sub="What employers expect">
+            <ClaimList items={m.education_expectations} sources={s} />
+            {m.alternative_pathways.length > 0 && <div className="mt-5"><Fact label="Alternative pathways"><ClaimList items={m.alternative_pathways} sources={s} /></Fact></div>}
+            {m.exams_certifications.length > 0 && <div className="mt-5"><Fact label="Exams & certifications"><ClaimList items={m.exams_certifications} sources={s} /></Fact></div>}
+          </Row>
+          <Row title="Industry & trends" sub="Who is hiring and where things are heading">
+            {m.demand.summary && <p className="mb-5 text-[15px] text-slate-300">{m.demand.summary}<Cite ids={m.demand.sources} sources={s} /></p>}
+            <Fact label="Industries hiring"><ClaimList items={m.industries_hiring} sources={s} /></Fact>
+            <div className="mt-5"><Fact label="Trends"><ClaimList items={m.industry_trends} sources={s} /></Fact></div>
+          </Row>
+        </Rows>
       </div>
 
-      <section className="card border-indigo-500/40 bg-indigo-500/5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-300">What this means for you</p>
-        <p className="mt-2 text-slate-200">{summary}</p>
-      </section>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Section title="Market outlook">
-          <DemandBadge level={m.demand.level} trend={m.demand.trend} />
-          <p className="mt-3 text-sm text-slate-300">{m.demand.summary || 'No source-backed demand summary found.'}<Cite ids={m.demand.sources} sources={s} /></p>
-        </Section>
-        <Section title={`Salary outlook${m.salary.region ? ` · ${m.salary.region}` : ''}`}>
-          <ul className="space-y-2 text-sm">
-            {[['Entry', m.salary.entry_level], ['Mid', m.salary.mid_level], ['Senior', m.salary.senior_level]].map(([k, b]) => (
-              <li key={k} className="flex justify-between gap-3">
-                <span className="text-slate-400">{k}</span>
-                {b ? <span className="font-semibold tabular-nums">{b.range}<Cite ids={b.sources} sources={s} /></span> : <span className="text-slate-500">Not found in sources</span>}
+      <div className="mt-10 space-y-1">
+        <More label={`Sources (${s.length})`}>
+          <ol className="space-y-2">
+            {s.map((src) => (
+              <li key={src.id}>
+                <span className="text-slate-500">[{src.id}] </span>
+                <a href={src.url} target="_blank" rel="noreferrer" className="text-indigo-300 hover:underline">{src.title}</a>
+                <span className="text-slate-500"> · {src.publisher}{src.published_at ? ` · ${src.published_at}` : ''}</span>
               </li>
             ))}
-          </ul>
-        </Section>
+          </ol>
+          {record.limitations && <p className="mt-3">Limitations: {record.limitations}</p>}
+          <p className="mt-2">Researched {new Date(record.researched_at).toLocaleString()} via {record.provider} ({record.model}), confidence {record.confidence}/100. Kept for {MARKET_INTELLIGENCE_TTL_DAYS} days.</p>
+        </More>
       </div>
-
-      <Section title="Where the opportunities are">
-        <div className="grid gap-4 sm:grid-cols-3">
-          {[['india', 'India'], ['global', 'Global'], ['remote', 'Remote']].map(([scope, label]) => (
-            <div key={scope}>
-              <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-              {byScope(scope).length
-                ? <ul className="space-y-1 text-sm text-slate-300">{byScope(scope).map((r) => <li key={r.region}>{r.region}<Cite ids={r.sources} sources={s} /></li>)}</ul>
-                : <p className="text-sm text-slate-500">No evidence found</p>}
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      <Section title="Your skill gaps vs. the market"><SkillGap gap={gap} sources={s} /></Section>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Section title="Education expectations">
-          <ClaimList items={m.education_expectations} sources={s} />
-          {m.alternative_pathways.length > 0 && <><p className="mb-1.5 mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Alternative pathways</p><ClaimList items={m.alternative_pathways} sources={s} /></>}
-          {m.exams_certifications.length > 0 && <><p className="mb-1.5 mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Exams & certifications</p><ClaimList items={m.exams_certifications} sources={s} /></>}
-        </Section>
-        <Section title="Industry">
-          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Industries hiring</p>
-          <ClaimList items={m.industries_hiring} sources={s} />
-          <p className="mb-1.5 mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Trends</p>
-          <ClaimList items={m.industry_trends} sources={s} />
-        </Section>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Section title="Opportunities for you">
-          {insights.opportunities.length ? (
-            <ul className="space-y-2 text-sm">
-              {insights.opportunities.map((o, i) => (
-                <li key={i} className="flex gap-2"><span className="text-emerald-400">✓</span><span className="text-slate-300">{o.text}<Cite ids={o.sources} sources={s} />{o.basis !== 'market' && <span className="block text-[11px] text-slate-500">Based on {o.basis}</span>}</span></li>
-              ))}
-            </ul>
-          ) : <p className="text-sm text-slate-500">None found in current sources.</p>}
-        </Section>
-        <Section title="Potential risks">
-          {insights.threats.length ? (
-            <ul className="space-y-2 text-sm">
-              {insights.threats.map((t, i) => (
-                <li key={i} className="flex gap-2"><span className="text-amber-400">!</span><span className="text-slate-300">{t.text}<Cite ids={t.sources} sources={s} />{t.basis !== 'market' && <span className="block text-[11px] text-slate-500">Based on {t.basis}</span>}</span></li>
-              ))}
-            </ul>
-          ) : <p className="text-sm text-slate-500">None found in current sources.</p>}
-        </Section>
-      </div>
-
-      <Section title={`Sources (${s.length})`}>
-        <ol className="space-y-1.5 text-sm">
-          {s.map((src) => (
-            <li key={src.id} className="flex gap-2">
-              <span className="w-6 shrink-0 text-xs text-slate-500">[{src.id}]</span>
-              <span>
-                <a href={src.url} target="_blank" rel="noreferrer" className="text-indigo-300 hover:underline">{src.title}</a>
-                <span className="text-xs text-slate-500"> · {src.publisher}{src.published_at ? ` · published ${src.published_at}` : ''} · accessed {new Date(src.accessed_at).toLocaleDateString()}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
-        {record.limitations && <p className="mt-3 text-xs text-slate-500">Limitations: {record.limitations}</p>}
-        <p className="mt-2 text-xs text-slate-500">Researched {new Date(record.researched_at).toLocaleString()} via {record.provider} ({record.model}). Kept for {MARKET_INTELLIGENCE_TTL_DAYS} days before it counts as outdated.</p>
-      </Section>
     </div>
   );
 }
@@ -290,52 +193,36 @@ export default function MarketIntelligence({ userId, profile, recs, feasibilityR
   const gap = record ? marketSkillGap(record, { demonstrated: progress.demonstratedSkills, learned: progress.learnedSkills }, selected) : null;
   const feas = feasibilityById[selected] ?? null;
 
+  const pick = (id) => { setSelected(id); setNotice(null); };
+
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-indigo-300">Module 4</p>
-        <h1 className="text-2xl font-bold">Market intelligence</h1>
-        <p className="mt-1 max-w-2xl text-sm text-slate-400">
-          Is the career relevant in today&rsquo;s market, and what will make you competitive? Research uses live web
-          sources through Praxio&rsquo;s AI gateway; every claim links to its source. Your Career Fit and Feasibility scores are never changed by it.
-        </p>
-        {!isComplete(inputs) && (
-          <p className="mt-2 text-xs text-amber-300">
-            Feasibility not completed, so the comparison shows Fit and Market only.{' '}
-            <button className="font-semibold underline" onClick={onGoFeasibility}>Check feasibility</button>
-          </p>
-        )}
-      </div>
+    <div>
+      <PageHead eyebrow="Market" title="What the world" accent="is asking for."
+        lede="Live, source-backed research for each of your directions. It never changes your fit or feasibility scores." />
 
-      <Comparison rows={rows} selected={selected} onSelect={(id) => { setSelected(id); setNotice(null); }} />
-
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="label mb-0" htmlFor="mi-career">Career</label>
-        <select id="mi-career" className="input w-auto" value={selected} onChange={(e) => { setSelected(e.target.value); setNotice(null); }}>
-          {recs.map((r) => <option key={r.domainId} value={r.domainId}>{CAREER_BY_ID[r.domainId]?.name}</option>)}
-        </select>
+      <div role="tablist" aria-label="Career" className="-mx-1 mb-8 flex gap-2 overflow-x-auto px-1 pb-1">
+        {rows.map((r) => (
+          <button key={r.careerId} type="button" role="tab" aria-selected={r.careerId === selected} onClick={() => pick(r.careerId)}
+            className={`inline-flex min-h-[46px] shrink-0 items-center gap-2 rounded-full px-5 text-[15px] transition ${r.careerId === selected ? 'bg-slate-100 text-slate-950' : 'bg-slate-900 text-slate-200 shadow-[var(--shadow)] hover:bg-slate-800'}`}>
+            <span className={`h-2 w-2 rounded-full ${r.demand ? (r.fresh ? 'bg-emerald-400' : 'bg-amber-400') : 'bg-slate-600'}`} />{r.name}
+          </button>
+        ))}
       </div>
 
       {notice && (
-        <p className="rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-200">
-          {UNAVAILABLE_MESSAGE}
-          {record ? ` Showing previously researched market intelligence from ${new Date(record.researched_at).toLocaleDateString()}.` : ''}
-          {notice.reason && <span className="block text-xs text-rose-300/80">{notice.reason}</span>}
+        <p className="mb-6 rounded-2xl bg-rose-500/10 px-5 py-3 text-sm text-rose-300">
+          {UNAVAILABLE_MESSAGE}{record ? ` Showing research from ${new Date(record.researched_at).toLocaleDateString()}.` : ''}
+          {notice.reason && <span className="block opacity-80">{notice.reason}</span>}
         </p>
       )}
 
-      {!record && (
-        <section className="card space-y-3 text-center">
-          <h2 className="text-lg font-semibold">No market research yet for {CAREER_BY_ID[selected]?.name}</h2>
-          <p className="mx-auto max-w-lg text-sm text-slate-400">
-            Praxio will search current, reputable sources for demand, salaries, regions, skills and trends, then compare
-            the skills employers ask for with the skills you&rsquo;ve demonstrated. This can take up to a minute.
-          </p>
-          <button className="btn-primary" disabled={busy} onClick={() => research(false)}>{busy ? 'Researching current market…' : 'Research market'}</button>
-        </section>
-      )}
-
-      {record && (
+      {!record ? (
+        <Panel className="text-center">
+          <h2 className="text-[26px] font-medium tracking-[-0.03em]">No research yet for {CAREER_BY_ID[selected]?.name}</h2>
+          <p className="mx-auto mt-3 max-w-lg text-slate-400">Praxio searches current, reputable sources for demand, salaries and skills, then compares them with what you’ve demonstrated. It can take up to a minute.</p>
+          <Btn className="mt-6" disabled={busy} onClick={() => research(false)}>{busy ? 'Researching current market…' : 'Research this market →'}</Btn>
+        </Panel>
+      ) : (
         <Report
           record={record}
           gap={gap}
@@ -346,6 +233,25 @@ export default function MarketIntelligence({ userId, profile, recs, feasibilityR
           onRefresh={() => research(true)}
         />
       )}
+
+      <div className="mt-2 space-y-1">
+        <More label="Compare all your directions">
+          <ul className="divide-y divide-slate-800">
+            {rows.map((r) => (
+              <li key={r.careerId} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <button type="button" className="text-left text-slate-200 hover:text-indigo-300" onClick={() => pick(r.careerId)}>{r.name}</button>
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="tabular-nums text-slate-500">Fit {r.fit}%{r.feasibility != null ? ` · Feasible ${r.feasibility}%` : ''}</span>
+                  {r.demand ? <Status tone={DEMAND_TONE[r.demand]}>{DEMAND_LABEL[r.demand]}</Status> : <Status>Not researched</Status>}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {!isComplete(inputs) && (
+            <p className="mt-3">Feasibility isn’t complete, so only fit and market are compared. <button type="button" className="font-medium text-indigo-300" onClick={onGoFeasibility}>Check feasibility</button></p>
+          )}
+        </More>
+      </div>
     </div>
   );
 }
