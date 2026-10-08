@@ -233,7 +233,7 @@ export default function Dashboard({ userId, profile, recs, feasibilityRow, asses
               })}
             </div>
             {/* mobile: swipeable chips */}
-            <div className="flex md:hidden" style={{ gap: 8, overflowX: 'auto', width: '100%', paddingBottom: 6 }}>
+            <div className="no-scrollbar flex md:hidden" style={{ gap: 8, overflowX: 'auto', width: '100%', paddingBottom: 6 }}>
               {nodes.map((n) => (
                 <button key={n.r.domainId} type="button" onClick={() => setSel(n.r.domainId)} aria-pressed={n === curNode} style={{ flex: '0 0 auto', minHeight: 46, padding: '0 18px', borderRadius: 999, border: 0, background: n === curNode ? 'var(--text)' : 'var(--surface)', color: n === curNode ? 'var(--bg)' : 'var(--text)', boxShadow: 'var(--shadow)', fontSize: 15 }}>{CAREER_BY_ID[n.r.domainId]?.name}</button>
               ))}

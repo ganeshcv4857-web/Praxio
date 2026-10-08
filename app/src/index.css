@@ -10,3 +10,7 @@
   .input { @apply w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm outline-none focus:border-indigo-400; }
   .label { @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400; }
 }
+
+/* Horizontally scrolling tab rows: keep the swipe, hide the bar. */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }

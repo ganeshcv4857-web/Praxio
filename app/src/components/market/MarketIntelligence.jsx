@@ -200,7 +200,7 @@ export default function MarketIntelligence({ userId, profile, recs, feasibilityR
       <PageHead eyebrow="Market" title="What the world" accent="is asking for."
         lede="Live, source-backed research for each of your directions. It never changes your fit or feasibility scores." />
 
-      <div role="tablist" aria-label="Career" className="-mx-1 mb-8 flex gap-2 overflow-x-auto px-1 pb-1">
+      <div role="tablist" aria-label="Career" className="no-scrollbar -mx-1 mb-8 flex gap-2 overflow-x-auto px-1 pb-1">
         {rows.map((r) => (
           <button key={r.careerId} type="button" role="tab" aria-selected={r.careerId === selected} onClick={() => pick(r.careerId)}
             className={`inline-flex min-h-[46px] shrink-0 items-center gap-2 rounded-full px-5 text-[15px] transition ${r.careerId === selected ? 'bg-slate-100 text-slate-950' : 'bg-slate-900 text-slate-200 shadow-[var(--shadow)] hover:bg-slate-800'}`}>

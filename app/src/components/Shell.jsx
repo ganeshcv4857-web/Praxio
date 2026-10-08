@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import Logo from './Logo.jsx';
 import usePraxioTheme from './usePraxioTheme.js';
+import PhoneLink from './PhoneLink.jsx';
+import { isConfigured } from '../lib/supabase.js';
 import './opening/opening.css';
 
 const NAV = [
@@ -19,6 +21,7 @@ const LABEL = Object.fromEntries([...NAV, { id: 'career', label: 'Career pathway
 export default function Shell({ activeTab, setActiveTab, profile, onSignOut, children }) {
   const [dark, flip] = usePraxioTheme();
   const [menu, setMenu] = useState(false);
+  const [phone, setPhone] = useState(false);
   const go = (id) => { setActiveTab(id); setMenu(false); };
   const initials = (profile?.full_name ?? '').trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || 'you';
   const tabBtn = (n, compact) => {
@@ -51,6 +54,9 @@ export default function Shell({ activeTab, setActiveTab, profile, onSignOut, chi
                 {[...NAV.filter((n) => !MOBILE.includes(n.id)), { id: 'profile', label: 'My profile' }].map((n) => (
                   <button key={n.id} type="button" onClick={() => go(n.id)} style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 12, border: 0, background: activeTab === n.id ? 'var(--surface-2)' : 'transparent', color: 'var(--text)', fontSize: 15 }}>{n.label}</button>
                 ))}
+                {isConfigured && (
+                  <button type="button" onClick={() => { setMenu(false); setPhone(true); }} style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 12, border: 0, background: 'transparent', color: 'var(--text)', fontSize: 15 }}>Connect your phone</button>
+                )}
                 <button type="button" onClick={onSignOut} style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 12, border: 0, background: 'transparent', color: 'var(--text-2)', fontSize: 15 }}>Log out</button>
               </div>
             )}
@@ -63,6 +69,7 @@ export default function Shell({ activeTab, setActiveTab, profile, onSignOut, chi
       <nav aria-label="Sections" className="grid lg:hidden" style={{ position: 'fixed', left: 16, right: 16, bottom: 16, zIndex: 20, gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', padding: 6, borderRadius: 999, background: 'var(--surface)', boxShadow: 'var(--shadow)' }}>
         {MOBILE.map((id) => tabBtn({ id, label: { dashboard: 'Home', results: 'Fit', development: 'Grow', market: 'Market' }[id] }, true))}
       </nav>
+      {phone && <PhoneLink dark={dark} onClose={() => setPhone(false)} />}
     </div>
   );
 }

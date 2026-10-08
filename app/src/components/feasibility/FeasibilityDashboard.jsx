@@ -28,7 +28,7 @@ function CareerRow({ rec, result, career, cost, onOpenCareer, open, onToggle }) 
       open={open}
       onToggle={onToggle}
       title={career.name}
-      sub={result.weakest ? `Main issue: ${factorLabel(result.weakest).toLowerCase()}` : 'Nothing you told us stands in the way'}
+      sub={result.weakest ? `Main issue: ${factorLabel(result.weakest).toLowerCase()}` : 'No barriers found'}
       meta={<Status tone={cat.tone}>{cat.label}</Status>}
     >
       <p className="max-w-2xl text-[17px] leading-relaxed text-slate-200">{result.consideration}</p>

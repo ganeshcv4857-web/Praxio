@@ -6,7 +6,7 @@ import { alignShortlist } from '../../lib/alignment/engine.js';
 import { WEIGHTS } from '../../lib/alignment/config.js';
 import { getAlignmentNarrative } from '../../lib/alignment/narrative.js';
 import FinancingPlan from '../feasibility/FinancingPlan.jsx';
-import { Btn, Fact, More, Panel, PageHead, Row, Rows, Status, Summary } from '../ui/kit.jsx';
+import { Btn, Fact, More, Panel, PageHead, Row, Rows, Status } from '../ui/kit.jsx';
 
 // Module 5: Parent–Student Alignment. Supportive by design: the recommended compromise
 // comes first; differences, family actions and other paths open on demand.
@@ -88,7 +88,7 @@ export default function Alignment({ userId, profile, recs, feasibilityRow, onGoF
       <PageHead eyebrow="Family" title="Find a path that works" accent="for both of you."
         lede="Not about who’s right: where you already agree, what’s worth talking through, and a route that keeps as much of your goal as possible." />
 
-      <div role="tablist" aria-label="Career" className="-mx-1 mb-8 flex gap-2 overflow-x-auto px-1 pb-1">
+      <div role="tablist" aria-label="Career" className="no-scrollbar -mx-1 mb-8 flex gap-2 overflow-x-auto px-1 pb-1">
         {results.map((r) => (
           <button key={r.careerId} type="button" role="tab" aria-selected={r.careerId === a.careerId} onClick={() => setSelected(r.careerId)}
             className={`inline-flex min-h-[46px] shrink-0 items-center gap-2 rounded-full px-5 text-[15px] transition ${r.careerId === a.careerId ? 'bg-slate-100 text-slate-950' : 'bg-slate-900 text-slate-200 shadow-[var(--shadow)] hover:bg-slate-800'}`}>
@@ -119,12 +119,6 @@ export default function Alignment({ userId, profile, recs, feasibilityRow, onGoF
       </Panel>
 
       <div className="h-8" />
-      <Summary>
-        {a.aligned.length > 0 && <Status tone="good">{a.aligned.length} already aligned</Status>}
-        {a.conflicts.length > 0 && <Status tone="warn">{a.conflicts.length} to talk through</Status>}
-        {a.familyActions?.length > 0 && <Status tone="info">{a.familyActions.length} family step{a.familyActions.length === 1 ? '' : 's'}</Status>}
-      </Summary>
-
       <Rows>
         {rec && <Row title={`Suggested path: ${rec.title}`} sub="What it keeps, what it eases, the trade-offs"><PathBody p={rec} explanation={n?.paths?.[rec.id]} /></Row>}
         {a.conflicts.length > 0 && (
@@ -158,7 +152,7 @@ export default function Alignment({ userId, profile, recs, feasibilityRow, onGoF
           </Row>
         )}
         {n?.conversation_starters?.length > 0 && (
-          <Row title="Questions to discuss together" sub={`${n.conversation_starters.length} conversation starters`}>
+          <Row title="Questions to discuss together" sub={`${n.conversation_starters.length} conversation starter${n.conversation_starters.length === 1 ? '' : 's'}`}>
             <ul className="space-y-2 text-[15px] text-slate-300">{n.conversation_starters.map((q) => <li key={q}>• {q}</li>)}</ul>
           </Row>
         )}
