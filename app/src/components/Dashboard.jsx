@@ -270,7 +270,7 @@ export default function Dashboard({ userId, profile, recs, feasibilityRow, asses
           </div>
           <div style={{ display: 'flex', gap: 6, marginTop: 28 }}>{[0, 1, 2].map((i) => <span key={i} style={{ flex: 1, height: 6, borderRadius: 3, background: i <= acadState.step ? (acadState.step === 0 ? 'var(--text-3)' : 'var(--accent)') : 'var(--line)' }} />)}</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-3)', marginTop: 8 }}><span>Missing</span><span>Self-reported</span><span>Validated</span></div>
-          <button type="button" className="pill" onClick={() => go('profile')} style={{ ...S.pill, marginTop: 28, minHeight: 48 }}>{acadState.step === 0 ? 'Add your record' : 'View record'} →</button>
+          <button type="button" className="pill" onClick={() => go('academic')} style={{ ...S.pill, marginTop: 28, minHeight: 48 }}>{acadState.step === 0 ? 'Add your record' : 'View record'} →</button>
         </div>
 
         <div style={{ ...S.card, flex: '1 1 320px', minWidth: 0 }} className="md:mt-10">
