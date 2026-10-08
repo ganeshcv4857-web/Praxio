@@ -3,6 +3,7 @@ import * as db from '../../lib/db.js';
 import { QUALIFICATIONS } from '../../lib/academic/schema.js';
 import { SUBJECTS, subjectLabel } from '../../../supabase/functions/_shared/academic/subjects.js';
 import { RESULTS, STREAMS, validateAcademicRecord } from '../../../supabase/functions/_shared/academic/validate.js';
+import { getAcademicGaps, getAcademicStrengths } from '../../lib/academic/evidence.js';
 import { Btn, More, PageHead, Panel, Status } from '../ui/kit.jsx';
 
 // Academic record: enter Class 10 / Class 12 marks subject by subject. Saved as a
@@ -67,8 +68,10 @@ function toValues(qual, f) {
   };
 }
 
-export default function AcademicRecord({ userId, onSaved }) {
+export default function AcademicRecord({ userId, onSaved, onOpenPathways }) {
   const [records, setRecords] = useState(null);
+  const [documents, setDocuments] = useState([]);
+  const [uploading, setUploading] = useState(false);
   const [qual, setQual] = useState('class_12');
   const [form, setForm] = useState(() => formFromRecord('class_12', null));
   const [busy, setBusy] = useState(false);
@@ -79,6 +82,7 @@ export default function AcademicRecord({ userId, onSaved }) {
     try {
       const ev = await db.getAcademicEvidence(userId);
       setRecords(ev.records ?? []);
+      setDocuments(ev.documents ?? []);
       return ev.records ?? [];
     } catch (e) {
       setError(`Couldn’t load your academic record: ${e.message}`);
@@ -266,10 +270,83 @@ export default function AcademicRecord({ userId, onSaved }) {
           <div className="flex flex-wrap items-center gap-3">
             <Btn onClick={save} disabled={busy || errors.length > 0}>{busy ? 'Saving…' : current ? 'Update record' : 'Save record'}</Btn>
             {current && <Btn kind="ghost" onClick={remove} disabled={busy}>Delete</Btn>}
-            <span className="text-sm text-slate-500">Saved as self-reported. Uploading a marksheet to validate it is coming next.</span>
+            <span className="text-sm text-slate-500">Saved as self-reported. Upload your marksheet below so it can be checked.</span>
           </div>
         </Panel>
       )}
+
+      {current && <MarksSummary record={current} onOpenPathways={onOpenPathways} />}
+
+      {records !== null && (
+        <Panel className="mt-6 space-y-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-[20px] font-medium tracking-[-0.02em]">{QUAL_LABEL[qual]} marksheet</h2>
+            <span className="text-sm text-slate-500">Photo or scan · JPG, PNG or WEBP · up to 5 MB</span>
+          </div>
+          <p className="text-[15px] text-slate-400">Uploading your marksheet lets Praxio check your record against it. Until it’s checked, your marks count as self-reported.</p>
+          <ul className="space-y-2">
+            {documents.filter((d) => d.qualification === qual).map((d) => (
+              <li key={d.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-950/40 px-4 py-3">
+                <span className="text-[15px] text-slate-200">Uploaded {new Date(d.uploaded_at).toLocaleDateString()}</span>
+                <span className="flex items-center gap-2">
+                  <Status tone={d.status === 'extracted' ? 'good' : d.status === 'extraction_failed' ? 'bad' : 'info'}>
+                    {d.status === 'extracted' ? 'Read' : d.status === 'extraction_failed' ? 'Couldn’t read' : 'Waiting to be checked'}
+                  </Status>
+                  <Btn kind="link" onClick={async () => { try { window.open(await db.academicDocumentUrl(d), '_blank', 'noopener'); } catch (e) { setError(e.message); } }}>View</Btn>
+                  <Btn kind="link" onClick={async () => {
+                    if (!window.confirm('Delete this marksheet?')) return;
+                    try { await db.deleteAcademicDocument(userId, d); await load(); } catch (e) { setError(e.message); }
+                  }}>Delete</Btn>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <label className={`pill inline-flex min-h-[46px] cursor-pointer items-center gap-2 rounded-full bg-slate-800 px-5 text-[15px] text-slate-100 hover:bg-slate-700 ${uploading ? 'pointer-events-none opacity-50' : ''}`}>
+            {uploading ? 'Uploading…' : 'Upload marksheet'}
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={uploading}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (!file) return;
+                setUploading(true); setError(''); setSaved('');
+                try { await db.uploadAcademicDocument(userId, qual, file); await load(); setSaved('Marksheet uploaded.'); } catch (err) { setError(err.message); } finally { setUploading(false); }
+              }} />
+          </label>
+        </Panel>
+      )}
     </div>
+  );
+}
+
+function MarksSummary({ record, onOpenPathways }) {
+  let strengths = [];
+  let gaps = [];
+  try { strengths = getAcademicStrengths(record); gaps = getAcademicGaps(record); } catch { /* unreadable record: show nothing */ }
+  return (
+    <Panel className="mt-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h2 className="text-[20px] font-medium tracking-[-0.02em]">What your marks show</h2>
+        {onOpenPathways && <Btn kind="link" onClick={onOpenPathways}>See pathways this opens →</Btn>}
+      </div>
+      {strengths.length === 0 && gaps.length === 0 ? (
+        <p className="mt-3 text-[15px] text-slate-400">Add marks out of a maximum for each subject to see your strongest and weakest subjects.</p>
+      ) : (
+        <div className="mt-4 grid gap-6 sm:grid-cols-2">
+          <div>
+            <div className="text-[13px] text-slate-500">Strong (75% and above)</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {strengths.length ? strengths.map((x) => <Status key={x.subject} tone="good">{subjectLabel(x.subject)} · {x.percentage}%</Status>) : <span className="text-sm text-slate-500">None yet</span>}
+            </div>
+          </div>
+          <div>
+            <div className="text-[13px] text-slate-500">Below 50%</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {gaps.length ? gaps.map((x) => <Status key={x.subject} tone="warn">{subjectLabel(x.subject)} · {x.percentage}%</Status>) : <span className="text-sm text-slate-500">None</span>}
+            </div>
+          </div>
+        </div>
+      )}
+      <p className="mt-4 text-sm text-slate-500">Bands describe your marks only; they never change your career fit.</p>
+    </Panel>
   );
 }

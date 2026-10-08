@@ -355,6 +355,46 @@ export async function saveSelfReportedRecord(userId, qualification, values) {
   );
 }
 
+const DOC_TYPES = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+export const MAX_DOCUMENT_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Upload a marksheet image to the private academic-documents bucket and record it as
+ * 'uploaded'. Only the server moves a document on to extracted / checked.
+ */
+export async function uploadAcademicDocument(userId, qualification, file) {
+  if (!QUALIFICATIONS.includes(qualification)) throw new Error(`Unknown qualification ${qualification}`);
+  const ext = DOC_TYPES[file?.type];
+  if (!ext) throw new Error('Upload a photo or scan as JPG, PNG or WEBP.');
+  if (file.size > MAX_DOCUMENT_BYTES) throw new Error('That file is over 5 MB. Try a smaller photo.');
+  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+  const sha256 = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  const id = crypto.randomUUID();
+  const storagePath = `${userId}/${id}.${ext}`;
+  const { error: upErr } = await supabase.storage.from('academic-documents').upload(storagePath, file, { contentType: file.type, upsert: false });
+  if (upErr) throw upErr;
+  const { data, error } = await supabase.from('academic_documents')
+    .insert({ id, user_id: userId, qualification, storage_path: storagePath, mime_type: file.type, size_bytes: file.size, sha256 })
+    .select().single();
+  if (error) {
+    await supabase.storage.from('academic-documents').remove([storagePath]);
+    throw new Error(error.code === '23505' ? 'You’ve already uploaded this exact file.' : error.message);
+  }
+  return data;
+}
+
+export async function deleteAcademicDocument(userId, doc) {
+  unwrap(await supabase.from('academic_documents').delete().eq('user_id', userId).eq('id', doc.id));
+  await supabase.storage.from('academic-documents').remove([doc.storage_path]);
+}
+
+/** Short-lived link to view an uploaded marksheet. */
+export async function academicDocumentUrl(doc) {
+  const { data, error } = await supabase.storage.from('academic-documents').createSignedUrl(doc.storage_path, 300);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
 export async function deleteAcademicRecord(userId, qualification) {
   unwrap(await supabase.from('academic_records').delete().eq('user_id', userId).eq('qualification', qualification));
 }

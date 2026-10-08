@@ -13,6 +13,7 @@ import { FEATURE_LABELS } from '../lib/features.js';
 import { fitTier } from '../lib/decision/candidates.js';
 import { loadDecisionBundle } from '../lib/decision/load.js';
 import { decide } from '../lib/decision/engine.js';
+import DecisionDetails from './decision/DecisionDetails.jsx';
 
 // The authenticated user's home ("Your position"). Everything shown is derived from
 // persisted data and the deterministic Decision Engine; nothing is invented, and
@@ -187,12 +188,13 @@ export default function Dashboard({ userId, profile, recs, feasibilityRow, asses
           {next.unlocks && <div style={{ position: 'relative', marginTop: 20, padding: '16px 18px', borderRadius: 18, background: 'var(--surface-2)', fontSize: 15, lineHeight: 1.5 }}><span style={{ color: 'var(--text-3)' }}>{m1Done ? 'Direction' : 'Unlocks'}</span><br />{next.unlocks}</div>}
           <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 26 }}>
             {next.action && <button type="button" className="pill" onClick={next.action} style={S.pill}>{next.cta} <span aria-hidden="true">→</span></button>}
-            {(next.why.length > 1 || next.steps?.length) && <button type="button" className="pill" onClick={() => setWhy(!why)} aria-expanded={why} style={S.ghost}>Why this first?</button>}
+            {(next.why.length > 1 || next.steps?.length || (m1Done && decision)) && <button type="button" className="pill" onClick={() => setWhy(!why)} aria-expanded={why} style={S.ghost}>Why this first?</button>}
           </div>
           {why && (
             <div style={{ position: 'relative', marginTop: 20, fontSize: 15, color: 'var(--text-2)', lineHeight: 1.6 }}>
               {next.why.map((r) => <p key={r.text} style={{ margin: '0 0 8px' }}>{r.text}{r.basis && <span style={{ color: 'var(--text-3)', fontSize: 13 }}> · {r.basis}</span>}</p>)}
               {next.steps?.length > 0 && <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>{next.steps.map((s) => <li key={s}>{s}</li>)}</ul>}
+              {m1Done && decision && <DecisionDetails userId={userId} decision={decision} />}
             </div>
           )}
         </aside>
@@ -271,6 +273,7 @@ export default function Dashboard({ userId, profile, recs, feasibilityRow, asses
           <div style={{ display: 'flex', gap: 6, marginTop: 28 }}>{[0, 1, 2].map((i) => <span key={i} style={{ flex: 1, height: 6, borderRadius: 3, background: i <= acadState.step ? (acadState.step === 0 ? 'var(--text-3)' : 'var(--accent)') : 'var(--line)' }} />)}</div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--text-3)', marginTop: 8 }}><span>Missing</span><span>Self-reported</span><span>Validated</span></div>
           <button type="button" className="pill" onClick={() => go('academic')} style={{ ...S.pill, marginTop: 28, minHeight: 48 }}>{acadState.step === 0 ? 'Add your record' : 'View record'} →</button>
+          {acadState.step > 0 && <button type="button" onClick={() => go('pathways')} style={{ marginLeft: 16, marginTop: 28, background: 'none', border: 0, padding: 0, color: 'var(--text-2)', fontSize: 15, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4 }}>Pathways this opens</button>}
         </div>
 
         <div style={{ ...S.card, flex: '1 1 320px', minWidth: 0 }} className="md:mt-10">

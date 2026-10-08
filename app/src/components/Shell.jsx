@@ -15,7 +15,7 @@ const NAV = [
   { id: 'advisor', label: 'Advisor' },
 ];
 const MOBILE = ['dashboard', 'results', 'development', 'market'];
-const LABEL = Object.fromEntries([...NAV, { id: 'career', label: 'Career pathway' }, { id: 'profile', label: 'My profile' }, { id: 'academic', label: 'Academic record' }].map((n) => [n.id, n.label]));
+const LABEL = Object.fromEntries([...NAV, { id: 'career', label: 'Career pathway' }, { id: 'profile', label: 'My profile' }, { id: 'academic', label: 'Academic record' }, { id: 'pathways', label: 'Pathways' }].map((n) => [n.id, n.label]));
 
 // App shell: floating pill nav (desktop), bottom pill nav (mobile).
 export default function Shell({ activeTab, setActiveTab, profile, onSignOut, children }) {
@@ -51,7 +51,7 @@ export default function Shell({ activeTab, setActiveTab, profile, onSignOut, chi
             {menu && (
               <div style={{ position: 'absolute', right: 0, top: 54, minWidth: 220, padding: 8, borderRadius: 20, background: 'var(--surface)', boxShadow: 'var(--shadow)', display: 'flex', flexDirection: 'column' }}>
                 {profile?.full_name && <p style={{ margin: 0, padding: '8px 12px', fontSize: 14, color: 'var(--text-3)' }}>{profile.full_name}</p>}
-                {[...NAV.filter((n) => !MOBILE.includes(n.id)), { id: 'academic', label: 'Academic record' }, { id: 'profile', label: 'My profile' }].map((n) => (
+                {[...NAV.filter((n) => !MOBILE.includes(n.id)), { id: 'academic', label: 'Academic record' }, { id: 'pathways', label: 'Pathways' }, { id: 'profile', label: 'My profile' }].map((n) => (
                   <button key={n.id} type="button" onClick={() => go(n.id)} style={{ textAlign: 'left', padding: '10px 12px', borderRadius: 12, border: 0, background: activeTab === n.id ? 'var(--surface-2)' : 'transparent', color: 'var(--text)', fontSize: 15 }}>{n.label}</button>
                 ))}
                 {isConfigured && (

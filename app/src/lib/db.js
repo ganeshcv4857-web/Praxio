@@ -33,3 +33,6 @@ export const recordEvaluation = (...a) => impl.recordEvaluation(...a);
 export const getAcademicEvidence = (...a) => impl.getAcademicEvidence(...a);
 export const saveSelfReportedRecord = (...a) => impl.saveSelfReportedRecord(...a);
 export const deleteAcademicRecord = (...a) => impl.deleteAcademicRecord(...a);
+export const uploadAcademicDocument = (...a) => impl.uploadAcademicDocument(...a);
+export const deleteAcademicDocument = (...a) => impl.deleteAcademicDocument(...a);
+export const academicDocumentUrl = (...a) => impl.academicDocumentUrl(...a);

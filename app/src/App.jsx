@@ -22,6 +22,7 @@ import Development from './components/development/Development.jsx';
 import MarketIntelligence from './components/market/MarketIntelligence.jsx';
 import Alignment from './components/alignment/Alignment.jsx';
 import AcademicRecord from './components/academic/AcademicRecord.jsx';
+import Pathways from './components/academic/Pathways.jsx';
 import { evaluateAll } from './lib/feasibility/scoring.js';
 import { pickInputs as pickFeasibilityInputs } from './components/feasibility/FeasibilityWizard.jsx';
 import { FEASIBILITY_VERSION } from './lib/feasibility/config.js';
@@ -383,7 +384,8 @@ export default function App() {
           onGoFeasibility={() => setActiveTab('feasibility')}
         />
       )}
-      {activeTab === 'academic' && <AcademicRecord key={navCount} userId={userId} />}
+      {activeTab === 'academic' && <AcademicRecord key={navCount} userId={userId} onOpenPathways={recs.length ? () => setActiveTab('pathways') : undefined} />}
+      {activeTab === 'pathways' && <Pathways key={navCount} userId={userId} profile={profile} recs={recs} onOpenRecord={() => setActiveTab('academic')} />}
       {activeTab === 'profile' && (needsAssessment
         ? <AssessmentFirst />
         : <ProfileTab profile={profile} onEdit={startAssessment} />)}

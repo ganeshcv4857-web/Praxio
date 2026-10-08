@@ -330,6 +330,11 @@ export async function saveSelfReportedRecord(userId, qualification, values) {
   return row;
 }
 
+const NO_UPLOADS = 'Uploading marksheets needs a Praxio account (demo mode has no file storage).';
+export async function uploadAcademicDocument() { throw new Error(NO_UPLOADS); }
+export async function deleteAcademicDocument() { throw new Error(NO_UPLOADS); }
+export async function academicDocumentUrl() { throw new Error(NO_UPLOADS); }
+
 export async function deleteAcademicRecord(_userId, qualification) {
   const s = load();
   s.academicRecords = (s.academicRecords ?? []).filter((r) => r.qualification !== qualification);
