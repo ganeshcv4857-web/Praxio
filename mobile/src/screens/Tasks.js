@@ -234,33 +234,32 @@ function ResultRow({ challenge, evaluation, onResubmit }) {
   const ok = evaluation.passed ?? (Number.isFinite(score) && score >= PASS_SCORE);
   const list = textList;
   return (
-    <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => { haptic(); setOpen(!open); }}>
-      <Card style={{ gap: 10 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <T kind="medium" size={16} style={{ flex: 1 }} numberOfLines={open ? undefined : 1}>{challenge.title}</T>
-          <Chip tone={ok ? 'good' : 'warn'}>{ok ? 'Passed' : 'Needs work'}{Number.isFinite(score) ? ` · ${score}` : ''}</Chip>
+    <Card style={{ gap: 10 }}>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => { haptic(); setOpen(!open); }}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <T kind="medium" size={16} style={{ flex: 1 }} numberOfLines={open ? undefined : 1}>{challenge.title}</T>
+        <Chip tone={ok ? 'good' : 'warn'}>{ok ? 'Passed' : 'Needs work'}{Number.isFinite(score) ? ` · ${score}` : ''}</Chip>
+      </Pressable>
+      {open && (
+        <View style={{ gap: 10 }}>
+          {asText(evaluation.feedback) ? <T size={15} color={t.c.text2}>{asText(evaluation.feedback)}</T> : null}
+          {list(evaluation.strengths).length > 0 && (
+            <View style={{ gap: 4 }}>
+              <Label>Strengths</Label>
+              {list(evaluation.strengths).slice(0, 3).map((x) => <T key={x} size={14}>✓ {x}</T>)}
+            </View>
+          )}
+          {list(evaluation.improvements).length > 0 && (
+            <View style={{ gap: 4 }}>
+              <Label>To improve</Label>
+              {list(evaluation.improvements).slice(0, 3).map((x) => <T key={x} size={14} color={t.c.text2}>→ {x}</T>)}
+            </View>
+          )}
+          {!asText(evaluation.feedback) && !list(evaluation.strengths).length && !list(evaluation.improvements).length
+            ? <T size={14} color={t.c.text3}>No written feedback for this evaluation.</T> : null}
+          {!ok && <Button title="Resubmit →" onPress={onResubmit} />}
         </View>
-        {open && (
-          <View style={{ gap: 10 }}>
-            {asText(evaluation.feedback) ? <T size={15} color={t.c.text2}>{asText(evaluation.feedback)}</T> : null}
-            {list(evaluation.strengths).length > 0 && (
-              <View style={{ gap: 4 }}>
-                <Label>Strengths</Label>
-                {list(evaluation.strengths).slice(0, 3).map((x) => <T key={x} size={14}>✓ {x}</T>)}
-              </View>
-            )}
-            {list(evaluation.improvements).length > 0 && (
-              <View style={{ gap: 4 }}>
-                <Label>To improve</Label>
-                {list(evaluation.improvements).slice(0, 3).map((x) => <T key={x} size={14} color={t.c.text2}>→ {x}</T>)}
-              </View>
-            )}
-            {!asText(evaluation.feedback) && !list(evaluation.strengths).length && !list(evaluation.improvements).length
-              ? <T size={14} color={t.c.text3}>No written feedback for this evaluation.</T> : null}
-            {!ok && <Button title="Resubmit →" onPress={onResubmit} />}
-          </View>
-        )}
-      </Card>
-    </Pressable>
+      )}
+    </Card>
   );
 }

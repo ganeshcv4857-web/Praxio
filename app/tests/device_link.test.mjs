@@ -35,6 +35,10 @@ test('typed codes are forgiving about case, spaces and dashes; wrong ones are re
 test('QR payloads round-trip, and plain codes parse too', () => {
   const code = generateLinkCode();
   assert.equal(parseLinkPayload(linkPayload(code)), code);
+  // Website QR: an https link any phone camera can open, still readable by the app.
+  const web = linkPayload(code, 'https://praxio-chi.vercel.app/');
+  assert.equal(web, `https://praxio-chi.vercel.app/link?code=${code}`);
+  assert.equal(parseLinkPayload(web), code);
   assert.equal(parseLinkPayload(formatLinkCode(code).toLowerCase()), code);
   assert.equal(parseLinkPayload('https://example.com/?nothing=1'), null);
 });

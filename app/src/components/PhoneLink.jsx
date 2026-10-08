@@ -23,7 +23,7 @@ export default function PhoneLink({ onClose, dark }) {
         throw new Error(msg);
       }
       setLink(data);
-      setQr(await QRCode.toDataURL(linkPayload(data.code), {
+      setQr(await QRCode.toDataURL(linkPayload(data.code, window.location.origin), {
         margin: 1, width: 440, errorCorrectionLevel: 'M',
         color: { dark: dark ? '#F1EEE8' : '#1C1B19', light: dark ? '#1F1F1E' : '#FFFFFF' },
       }));
@@ -56,7 +56,7 @@ export default function PhoneLink({ onClose, dark }) {
           <h2 id="phone-link-title" className="text-[28px] font-normal leading-tight tracking-[-0.03em]">Connect your <span className="ser text-indigo-300">phone.</span></h2>
           <button type="button" onClick={onClose} aria-label="Close" className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-800 text-slate-300 hover:text-slate-100">✕</button>
         </div>
-        <p className="mt-3 text-[15px] text-slate-400">Open the Praxio app on your phone, then scan this code or type it in.</p>
+        <p className="mt-3 text-[15px] text-slate-400">Scan this with your phone’s camera or with the Praxio app, or type the code in the app.</p>
 
         <div className="mt-6 grid place-items-center">
           {busy && !link && <div className="grid h-[220px] w-[220px] place-items-center rounded-3xl bg-slate-800 text-sm text-slate-400">Making a code…</div>}

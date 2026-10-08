@@ -8,6 +8,7 @@ import { InstrumentSerif_400Regular_Italic } from '@expo-google-fonts/instrument
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SplashScreen from 'expo-splash-screen';
 import { haptic } from './src/haptics.js';
+import { refreshReminder, reminderText } from './src/reminders.js';
 import { isConfigured, supabase } from './src/supabaseClient.js';
 import { PALETTES, ThemeContext, useTheme } from './src/theme.js';
 import { usePraxioData } from './src/data.js';
@@ -103,6 +104,11 @@ function Signedin({ session }) {
   const [tab, setTab] = useState('today');
   const { data, loading, error, reload, offline, updatedAt } = useData(session.user.id);
 
+  // Keep the daily nudge's text in step with the real next step after each fresh load.
+  useEffect(() => {
+    if (data && !loading && !offline) refreshReminder(reminderText(data));
+  }, [data, loading, offline]);
+
   if (!data && loading) return <Loading label="Loading your position…" />;
   if (!data) {
     return (
@@ -120,7 +126,7 @@ function Signedin({ session }) {
         {tab === 'today' && <Today {...props} goTasks={() => setTab('tasks')} />}
         {tab === 'tasks' && <Tasks {...props} />}
         {tab === 'career' && <Career {...props} />}
-        {tab === 'profile' && <Profile profile={data.profile} email={session.user.email} />}
+        {tab === 'profile' && <Profile profile={data.profile} email={session.user.email} data={data} />}
       </ErrorBoundary>
 
       <View

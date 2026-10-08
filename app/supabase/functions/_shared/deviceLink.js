@@ -33,8 +33,15 @@ export function normalizeLinkCode(input) {
 
 export const formatLinkCode = (code) => `${code.slice(0, 4)}-${code.slice(4)}`;
 
-/** What the QR code encodes. */
-export const linkPayload = (code) => `${LINK_SCHEME}${code}`;
+/** Deep link that opens the installed Praxio app and pairs it. */
+export const appLink = (code) => `${LINK_SCHEME}${code}`;
+
+/**
+ * What the QR code encodes. With the website's origin it is an ordinary https link, so any
+ * phone camera can open it (the /link page then hands off to the app or shows the code to
+ * type); the in-app scanner reads the code from either form.
+ */
+export const linkPayload = (code, origin) => (origin ? `${origin.replace(/\/+$/, '')}/link?code=${code}` : appLink(code));
 
 /** Code from a scanned QR (praxio://link?code=…) or from typed text; null if neither. */
 export function parseLinkPayload(text) {

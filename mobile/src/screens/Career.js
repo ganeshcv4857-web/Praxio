@@ -36,8 +36,8 @@ export default function Career({ data, loading, reload }) {
         let strengths = [];
         try { strengths = drivers(r).strengths; } catch { strengths = []; }
         return (
-          <Pressable key={r.domainId} accessibilityRole="button" accessibilityState={{ expanded: isOpen }} onPress={() => setOpen(isOpen ? '' : r.domainId)}>
-            <Card style={{ gap: 12 }}>
+          <Card key={r.domainId} style={{ gap: 12 }}>
+            <Pressable accessibilityRole="button" accessibilityState={{ expanded: isOpen }} onPress={() => setOpen(isOpen ? '' : r.domainId)} style={{ gap: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <T size={13} color={t.c.text3}>{i + 1}</T>
                 <T kind="medium" size={18} style={{ flex: 1 }}>{career?.name ?? r.domainId}</T>
@@ -47,26 +47,26 @@ export default function Career({ data, loading, reload }) {
                 <Chip tone={tierTone}>{tierLabel}</Chip>
                 {feasLabel ? <Chip tone={feasTone}>{feasLabel}</Chip> : null}
               </View>
-              {isOpen && (
-                <View style={{ gap: 12 }}>
-                  {career?.summary ? <T color={t.c.text2}>{career.summary}</T> : null}
-                  {strengths.length > 0 && (
-                    <View style={{ gap: 6 }}>
-                      <Label>Why it fits</Label>
-                      {strengths.map((s) => <T key={s.feature} size={15}>✓ {FEATURE_LABELS[s.feature] ?? s.feature}</T>)}
-                    </View>
-                  )}
-                  {career?.roadmap?.nextSteps?.length ? (
-                    <View style={{ gap: 6 }}>
-                      <Label>First steps</Label>
-                      {career.roadmap.nextSteps.slice(0, 2).map((s) => <T key={s} size={15} color={t.c.text2}>→ {s}</T>)}
-                    </View>
-                  ) : null}
-                  <Button kind="link" title="Full pathway on the web →" onPress={() => Linking.openURL(WEB_URL)} />
-                </View>
-              )}
-            </Card>
-          </Pressable>
+            </Pressable>
+            {isOpen && (
+              <View style={{ gap: 12 }}>
+                {career?.summary ? <T color={t.c.text2}>{career.summary}</T> : null}
+                {strengths.length > 0 && (
+                  <View style={{ gap: 6 }}>
+                    <Label>Why it fits</Label>
+                    {strengths.map((s) => <T key={s.feature} size={15}>✓ {FEATURE_LABELS[s.feature] ?? s.feature}</T>)}
+                  </View>
+                )}
+                {career?.roadmap?.nextSteps?.length ? (
+                  <View style={{ gap: 6 }}>
+                    <Label>First steps</Label>
+                    {career.roadmap.nextSteps.slice(0, 2).map((s) => <T key={s} size={15} color={t.c.text2}>→ {s}</T>)}
+                  </View>
+                ) : null}
+                <Button kind="link" title="Full pathway on the web →" onPress={() => Linking.openURL(WEB_URL)} />
+              </View>
+            )}
+          </Card>
         );
       })}
     </Screen>
