@@ -129,10 +129,11 @@ function Signedin({ session }) {
         {tab === 'profile' && <Profile profile={data.profile} email={session.user.email} data={data} />}
       </ErrorBoundary>
 
+      <View pointerEvents="box-none" style={{ position: 'absolute', left: 16, right: 16, bottom: insets.bottom + 12, alignItems: 'center' }}>
       <View
         accessibilityRole="tablist"
         style={{
-          position: 'absolute', left: 16, right: 16, bottom: insets.bottom + 12, flexDirection: 'row', padding: 6, borderRadius: 999,
+          width: '100%', maxWidth: 520, flexDirection: 'row', padding: 6, borderRadius: 999,
           backgroundColor: t.c.surface, shadowColor: t.c.shadow, shadowOpacity: 0.12, shadowRadius: 18, shadowOffset: { width: 0, height: 6 }, elevation: 6,
         }}
       >
@@ -145,6 +146,7 @@ function Signedin({ session }) {
             </Pressable>
           );
         })}
+      </View>
       </View>
     </View>
   );

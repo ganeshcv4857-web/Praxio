@@ -5,7 +5,9 @@
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { COURSE_BY_ID } from '../../app/src/lib/development/catalog.js';
+import { reminderText } from './model.js';
+
+export { reminderText };
 
 const KEY = 'praxio-reminder-v1';
 const CHANNEL = 'daily-nudge';
@@ -98,21 +100,4 @@ export async function refreshReminder(body) {
   } catch {
     // keep the existing reminder
   }
-}
-
-/** One short, specific line from the person's real data. */
-export function reminderText(data) {
-  const d = data ?? {};
-  const project = (d.dev?.challenges ?? []).find((c) => c.status === 'needs_improvement') ?? (d.dev?.challenges ?? []).find((c) => c.status === 'open');
-  if (project?.title) {
-    return project.status === 'needs_improvement'
-      ? `“${project.title}” needs one more pass. Use the feedback and resubmit.`
-      : `Your project “${project.title}” is waiting. Submit it to prove the skill.`;
-  }
-  const current = (d.stages ?? []).find((s) => s.kind === 'course' && s.status === 'current');
-  const course = current ? COURSE_BY_ID[current.courseId] : null;
-  const next = current?.progress?.next?.title;
-  if (course && next) return `Keep going: “${next}” is next in ${course.title}.`;
-  if (d.decision?.nextAction?.title) return `Your next move: ${d.decision.nextAction.title}`;
-  return 'Check your next move in Praxio.';
 }

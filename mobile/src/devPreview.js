@@ -38,13 +38,13 @@ function build() {
   const dev = {
     plan: null,
     coursePlans: [{ course_id: course.id }],
-    moduleProgress: [{ course_id: course.id, module_id: m1.id, status: 'completed' }],
+    moduleProgress: [{ course_id: course.id, module_id: m1.id, status: 'completed', completed_at: new Date(Date.now() - 86_400_000).toISOString() }],
     challenges: [{
       id: 'preview-challenge', course_id: course.id, module_id: m1.id, status: 'open',
       title: m1.project?.title ?? 'Starter project', description: m1.project?.brief ?? '', requirements: m1.project?.requirements ?? [],
       skills: m1.skills,
     }],
-    submissions: [], skills: [], rewards: [{ points: 10 }],
+    submissions: [{ id: 'preview-sub', challenge_id: 'preview-done', submitted_at: new Date().toISOString() }], skills: [], rewards: [{ points: 10 }],
     evaluations: [{
       id: 'preview-eval', challenge_id: 'preview-done', total_score: 58, passed: false, evaluated_at: '2026-10-07T10:00:00Z',
       feedback: 'Solid start: the core logic works, but the README doesn’t explain how to run it.',

@@ -2,7 +2,7 @@ import { Linking, View } from 'react-native';
 import { CAREER_BY_ID } from '../../../app/src/lib/careers.js';
 import { userContext } from '../../../app/src/lib/userContext.js';
 import { WEB_URL } from '../supabaseClient.js';
-import { timeAgo } from '../data.js';
+import { timeAgo, weeklyActivity } from '../model.js';
 import { useTheme } from '../theme.js';
 import { Bar, Button, Card, Chip, Headline, Label, Notice, Screen, T } from '../ui.js';
 
@@ -78,6 +78,8 @@ export default function Today({ data, loading, reload, offline, updatedAt, profi
         <Button title={`${move.cta} →`} onPress={move.act} />
       </Card>
 
+      {m2Done && dev && <WeekCard dev={dev} />}
+
       {m1Done && (
         <Card style={{ gap: 16 }}>
           <Label>Progress{chosen ? ` · ${CAREER_BY_ID[chosen.careerId]?.name ?? ''}` : ''}</Label>
@@ -118,5 +120,39 @@ function Stat({ label, value }) {
       <T kind="semibold" size={22}>{String(value)}</T>
       <T size={12} color={t.c.text3}>{label}</T>
     </View>
+  );
+}
+
+function WeekCard({ dev }) {
+  const t = useTheme();
+  const w = weeklyActivity(dev);
+  const peak = Math.max(1, ...w.days.map((d) => d.modules + d.projects));
+  const parts = [];
+  if (w.modules) parts.push(`${w.modules} module${w.modules === 1 ? '' : 's'}`);
+  if (w.projects) parts.push(`${w.projects} project${w.projects === 1 ? '' : 's'} submitted`);
+  return (
+    <Card style={{ gap: 14 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <Label>This week</Label>
+        {w.streak > 1 ? <T size={13} color={t.c.accent}>{w.streak}-day streak</T> : null}
+      </View>
+      <View accessibilityLabel={`Active on ${w.activeDays} of the last 7 days`} style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8, height: 64 }}>
+        {w.days.map((d) => {
+          const n = d.modules + d.projects;
+          return (
+            <View key={d.key} style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+              <View style={{
+                width: '100%', height: n ? 10 + (38 * n) / peak : 6, borderRadius: 6,
+                backgroundColor: n ? t.c.accent : t.c.surface2, borderWidth: d.today ? 1.5 : 0, borderColor: t.c.text3,
+              }} />
+              <T size={11} color={d.today ? t.c.text : t.c.text3}>{d.label}</T>
+            </View>
+          );
+        })}
+      </View>
+      <T size={14} color={t.c.text2}>
+        {parts.length ? `${parts.join(' · ')} in the last 7 days.` : 'Nothing logged in the last 7 days. One module today gets you moving.'}
+      </T>
+    </Card>
   );
 }

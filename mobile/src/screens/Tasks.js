@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Linking, Modal, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COURSE_BY_ID } from '../../../app/src/lib/development/catalog.js';
 import { completeModuleFlow, submitAndEvaluate } from '../../../app/src/lib/development/service.js';
 import { PASS_SCORE } from '../../../app/src/lib/development/config.js';
 import { WEB_URL } from '../supabaseClient.js';
 import { haptic } from '../haptics.js';
+import { pathCourses } from '../model.js';
 import { font, useTheme } from '../theme.js';
 import { Button, Card, Chip, Headline, Label, Notice, Screen, T } from '../ui.js';
 
@@ -62,17 +62,15 @@ export default function Tasks({ data, loading, reload, userId }) {
     .filter((h) => h.evaluation)
     .sort((a, b) => String(b.evaluation.evaluated_at ?? '').localeCompare(String(a.evaluation.evaluated_at ?? '')))
     .slice(0, 6);
-  const current = (d.stages ?? []).find((s) => s.kind === 'course' && s.status === 'current');
-  const course = current ? COURSE_BY_ID[current.courseId] : null;
-  const nextModules = course ? course.modules.filter((m) => !d.progress?.isDone?.(course.id, m.id)).slice(0, 3) : [];
+  const courses = pathCourses(d);
 
-  const markComplete = async (m) => {
+  const markComplete = async (course, m) => {
     if (!dev || !d.chosen || !course) return;
     const ok = await confirm('Mark module complete?', `"${m.title}" will count as learned and its project will unlock.`);
     if (!ok) return;
     setBusyModule(m.id);
     try {
-      const challenge = await completeModuleFlow({ userId, careerId: d.chosen.careerId, courseId: course.id, moduleId: m.id, dev });
+      const challenge = await completeModuleFlow({ userId, careerId: d.chosen.careerId, courseId: course.courseId, moduleId: m.id, dev });
       await reload();
       haptic('success');
       notify('Module learned', challenge?.title ? `Project unlocked: ${challenge.title}. Submit it to prove the skill.` : 'Nice work.');
@@ -109,23 +107,12 @@ export default function Tasks({ data, loading, reload, userId }) {
         </>
       )}
 
-      <Label>{course ? `Up next · ${course.title}` : 'Modules'}</Label>
-      {!course ? (
-        <Card soft><T color={t.c.text2}>Every course on your path is complete.</T></Card>
-      ) : (
-        <Card style={{ gap: 4, paddingVertical: 8 }}>
-          {nextModules.map((m, i) => (
-            <View key={m.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderTopWidth: i ? 1 : 0, borderTopColor: t.c.line }}>
-              <View style={{ flex: 1, gap: 2 }}>
-                <T kind="medium">{m.title}</T>
-                {m.skills?.length ? <T size={13} color={t.c.text3} numberOfLines={1}>{m.skills.join(' · ')}</T> : null}
-              </View>
-              <Button kind="ghost" title={busyModule === m.id ? 'Saving…' : 'Done'} busy={busyModule === m.id} disabled={Boolean(busyModule)} onPress={() => markComplete(m)} style={{ minHeight: 42, paddingHorizontal: 16 }} />
-            </View>
-          ))}
-          <T size={13} color={t.c.text3} style={{ paddingVertical: 8 }}>{current.progress?.done ?? 0} of {current.progress?.total ?? 0} modules done in this course.</T>
-        </Card>
-      )}
+      <Label>Your path</Label>
+      {courses.length === 0 ? (
+        <Card soft><T color={t.c.text2}>Your learning path appears here once it’s planned on the web.</T></Card>
+      ) : courses.map((c) => (
+        <PathCourse key={c.courseId} course={c} busyModule={busyModule} onDone={(m) => markComplete(c, m)} />
+      ))}
 
       <SubmitSheet
         challenge={submitting}
@@ -260,6 +247,39 @@ function ResultRow({ challenge, evaluation, onResubmit }) {
           {!ok && <Button title="Resubmit →" onPress={onResubmit} />}
         </View>
       )}
+    </Card>
+  );
+}
+
+const COURSE_STATUS = { done: ['good', 'Done'], current: ['info', 'Up next'], upcoming: ['muted', 'Later'] };
+
+function PathCourse({ course, busyModule, onDone }) {
+  const t = useTheme();
+  const [open, setOpen] = useState(course.status === 'current');
+  const [tone, word] = COURSE_STATUS[course.status] ?? COURSE_STATUS.upcoming;
+  const nextId = course.modules.find((m) => !m.done)?.id;
+  return (
+    <Card style={{ gap: 4, paddingVertical: open ? 14 : 18 }}>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => { haptic(); setOpen(!open); }}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <T kind="medium" size={16}>{course.title}</T>
+          <T size={13} color={t.c.text3}>{course.done} of {course.total} modules</T>
+        </View>
+        <Chip tone={tone}>{word}</Chip>
+      </Pressable>
+      {open && course.modules.map((m) => (
+        <View key={m.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: t.c.line }}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <T kind={m.id === nextId ? 'medium' : 'regular'} color={m.done ? t.c.text3 : t.c.text}>{m.title}</T>
+            {m.skills.length ? <T size={13} color={t.c.text3} numberOfLines={1}>{m.skills.join(' · ')}</T> : null}
+          </View>
+          {m.done
+            ? <Chip tone="good">Learned</Chip>
+            : <Button kind={m.id === nextId ? 'primary' : 'ghost'} title={busyModule === m.id ? 'Saving…' : 'Done'} busy={busyModule === m.id}
+              disabled={Boolean(busyModule)} onPress={() => onDone(m)} style={{ minHeight: 40, paddingHorizontal: 16 }} />}
+        </View>
+      ))}
     </Card>
   );
 }

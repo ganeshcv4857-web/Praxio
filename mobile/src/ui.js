@@ -30,11 +30,12 @@ export function Screen({ children, refreshing = false, onRefresh }) {
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: t.c.bg }}
-      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 120, paddingHorizontal: 20, gap: 16 }}
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 120, paddingHorizontal: 20 }}
       refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.c.text3} colors={[t.c.text2]} /> : undefined}
       keyboardShouldPersistTaps="handled"
     >
-      {children}
+      {/* Phones: full width. Tablets: a centred column, so lines stay readable. */}
+      <View style={{ width: '100%', maxWidth: 640, alignSelf: 'center', gap: 16 }}>{children}</View>
     </ScrollView>
   );
 }

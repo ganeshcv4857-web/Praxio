@@ -9,24 +9,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as db from '../../app/src/lib/db.js';
 import { fromRow } from '../../app/src/lib/ai.js';
-import { isComplete, evaluateAll } from '../../app/src/lib/feasibility/scoring.js';
-import { deriveProgress, pathwayStages } from '../../app/src/lib/development/learning.js';
-import { rankPathways } from '../../app/src/lib/development/pathways.js';
 import { applyCustomisation } from '../../app/src/lib/development/projects.js';
 import { loadDecisionBundle } from '../../app/src/lib/decision/load.js';
 import { decide } from '../../app/src/lib/decision/engine.js';
+import { derive, pickInputs, timeAgo } from './model.js';
+
+export { derive, pickInputs, timeAgo };
 
 const CACHE_PREFIX = 'praxio-cache-v1:';
-
-// Same keys as the website's feasibility wizard (pickInputs).
-const FEASIBILITY_KEYS = [
-  'income_band', 'education_budget', 'loan_willingness', 'risk_tolerance', 'education_preference',
-  'location_preference', 'relocation', 'family_priorities', 'primary_funder', 'scholarship_interest',
-];
-export function pickInputs(row) {
-  if (!row) return {};
-  return Object.fromEntries(FEASIBILITY_KEYS.filter((k) => row[k] != null).map((k) => [k, row[k]]));
-}
 
 const safe = async (label, fn, fallback, errors) => {
   try {
@@ -55,34 +45,6 @@ async function loadRaw(userId) {
     ? await safe('Next move', async () => decide(await loadDecisionBundle({ userId, profile, recs, inputs })), null, errors)
     : null;
   return { profile, recs, feasibilityRow, dev, decision, errors };
-}
-
-/** Pure: everything the screens need, derived from raw records. */
-export function derive(raw) {
-  const errors = [...(raw.errors ?? [])];
-  const { profile = null, recs = [], dev = null, decision = null } = raw;
-  const inputs = pickInputs(raw.feasibilityRow);
-  const m1Done = Boolean(profile?.onboarded_at) && recs.length > 0;
-  const m2Done = m1Done && isComplete(inputs);
-  const progress = deriveProgress(dev);
-  let chosen = null;
-  let stages = [];
-  let feasibility = {};
-  if (m2Done) {
-    try {
-      const pathways = rankPathways(recs, inputs);
-      chosen = (dev?.plan && pathways.find((p) => p.careerId === dev.plan.career_id && p.type === dev.plan.pathway_type)) || pathways[0] || null;
-      stages = chosen ? pathwayStages(chosen, progress) : [];
-    } catch (e) {
-      errors.push(`Learning path: ${e?.message ?? 'failed'}`);
-    }
-    try {
-      feasibility = Object.fromEntries(evaluateAll(inputs, recs).map((r) => [r.domainId, r]));
-    } catch (e) {
-      errors.push(`Feasibility results: ${e?.message ?? 'failed'}`);
-    }
-  }
-  return { profile, recs, inputs, feasibility, dev, decision, progress, chosen, stages, m1Done, m2Done, errors };
 }
 
 async function readCache(userId) {
@@ -157,15 +119,4 @@ export function usePraxioData(userId) {
   }, [userId, reload]);
 
   return { ...state, reload };
-}
-
-/** "just now", "5 min ago", "3 h ago", "2 days ago". */
-export function timeAgo(ts) {
-  if (!ts) return '';
-  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
-  if (s < 60) return 'just now';
-  if (s < 3600) return `${Math.round(s / 60)} min ago`;
-  if (s < 86400) return `${Math.round(s / 3600)} h ago`;
-  const d = Math.round(s / 86400);
-  return `${d} day${d === 1 ? '' : 's'} ago`;
 }
