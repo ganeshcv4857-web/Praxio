@@ -48,6 +48,13 @@ export default function AuthScreen({ initialError = '', initialNotice = '', init
     }
   };
 
+  // Google sign-in through Supabase OAuth (the provider must be enabled in Supabase).
+  const google = async () => {
+    setError('');
+    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } });
+    if (error) setError(/provider is not enabled/i.test(error.message) ? 'Google sign-in isn’t switched on yet. Use email for now.' : error.message);
+  };
+
   const signIn = tab === 'login';
   const head = signIn ? ['Welcome', 'back.'] : tab === 'signup' ? ['Find your', 'position.'] : ['Reset your', 'password.'];
   const lede = signIn
@@ -71,6 +78,10 @@ export default function AuthScreen({ initialError = '', initialNotice = '', init
       <div aria-hidden="true" style={{ position: 'absolute', left: '-15vw', bottom: '-35vw', width: '70vw', height: '70vw', borderRadius: '50%', border: '1px solid var(--line)' }} />
       <div aria-hidden="true" style={{ position: 'absolute', left: '-4vw', bottom: '-24vw', width: '48vw', height: '48vw', borderRadius: '50%', border: '1px solid var(--line)' }} />
       <div aria-hidden="true" style={{ position: 'absolute', left: '7vw', bottom: '-13vw', width: '26vw', height: '26vw', borderRadius: '50%', background: 'var(--accent-soft)' }} />
+      <div aria-hidden="true" className="hidden md:block" style={{ position: 'absolute', left: 'calc(20vw - 22px)', bottom: 'calc(0vw - 22px)', width: 44, height: 44 }}>
+        <div className="halo" style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'var(--accent)' }} />
+        <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'var(--accent)' }} />
+      </div>
 
       <header style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, padding: '24px clamp(20px, 4vw, 40px)' }}>
         <button type="button" onClick={onBack} aria-label="Back to Praxio" style={{ marginRight: 'auto', background: 'none', border: 0, padding: 0, color: 'var(--text)' }}><Logo height={40} /></button>
@@ -117,6 +128,15 @@ export default function AuthScreen({ initialError = '', initialNotice = '', init
             <button type="submit" className="pill" disabled={busy} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, minHeight: 56, marginTop: 6, borderRadius: 999, border: 0, background: 'var(--text)', color: 'var(--bg)', fontSize: 16, fontWeight: 500, opacity: busy ? 0.6 : 1 }}>
               {busy ? 'Please wait…' : signIn ? 'Continue' : tab === 'signup' ? 'Create account' : 'Send reset link'} {!busy && <span aria-hidden="true">→</span>}
             </button>
+            {tab !== 'forgot' && (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, color: 'var(--text-3)', fontSize: 13 }}><span style={{ flex: 1, height: 1, background: 'var(--line)' }} />or<span style={{ flex: 1, height: 1, background: 'var(--line)' }} /></div>
+                <button type="button" className="pill" onClick={google} disabled={busy} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, minHeight: 56, borderRadius: 999, border: 0, background: 'var(--surface-2)', color: 'var(--text)', fontSize: 16 }}>
+                  <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M17.6 9.2c0-.6-.1-1.2-.2-1.8H9v3.4h4.8a4.1 4.1 0 0 1-1.8 2.7v2.2h2.9c1.7-1.6 2.7-3.9 2.7-6.5z" fill="#4285F4" /><path d="M9 18c2.4 0 4.5-.8 6-2.2l-2.9-2.2c-.8.5-1.8.9-3.1.9-2.4 0-4.4-1.6-5.1-3.8H.9v2.3A9 9 0 0 0 9 18z" fill="#34A853" /><path d="M3.9 10.7a5.4 5.4 0 0 1 0-3.4V5H.9a9 9 0 0 0 0 8l3-2.3z" fill="#FBBC05" /><path d="M9 3.6c1.3 0 2.5.5 3.5 1.4l2.6-2.6A9 9 0 0 0 .9 5l3 2.3C4.6 5.2 6.6 3.6 9 3.6z" fill="#EA4335" /></svg>
+                  Continue with Google
+                </button>
+              </>
+            )}
             {tab === 'forgot' && <button type="button" onClick={() => go('login')} style={{ background: 'none', border: 0, color: 'var(--accent)', fontSize: 15, minHeight: 44 }}>Back to sign in</button>}
           </form>
           <p style={{ margin: '20px 0 0', fontSize: 13, color: 'var(--text-3)', textAlign: 'center' }}>Praxio never shares your record.</p>

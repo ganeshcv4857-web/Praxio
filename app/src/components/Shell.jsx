@@ -64,7 +64,7 @@ export default function Shell({ activeTab, setActiveTab, profile, onSignOut, chi
         <main style={{ paddingTop: 24 }}>{children}</main>
       </div>
 
-      <nav aria-label="Sections" className="lg:hidden" style={{ position: 'fixed', left: 16, right: 16, bottom: 16, zIndex: 20, display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', padding: 6, borderRadius: 999, background: 'var(--surface)', boxShadow: 'var(--shadow)' }}>
+      <nav aria-label="Sections" className="grid lg:hidden" style={{ position: 'fixed', left: 16, right: 16, bottom: 16, zIndex: 20, gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', padding: 6, borderRadius: 999, background: 'var(--surface)', boxShadow: 'var(--shadow)' }}>
         {MOBILE.map((id) => tabBtn({ id, label: { dashboard: 'Home', results: 'Fit', development: 'Grow', market: 'Market' }[id] }, true))}
       </nav>
     </div>

@@ -307,6 +307,7 @@ export default function App() {
           feasibilityRow={feasibility}
           assessmentSession={assessment}
           onStartAssessment={startAssessment}
+          onOpenCareer={openCareer}
           go={(tab) => { setActiveTab(tab); setNavCount((n) => n + 1); }}
           importOffer={importOffer}
         />
