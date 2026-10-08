@@ -1,0 +1,20 @@
+/* Tailwind palette → Praxio theme (generated). Dark = charcoal (default), light = creme beige + white.
+   Older module screens use slate/indigo/... classes; these variables make them follow the theme. */
+:root, .pxl.dark {
+  --c-slate-50: 248 246 242; --c-slate-100: 241 238 232; --c-slate-200: 224 220 212; --c-slate-300: 201 197 189; --c-slate-400: 169 165 158; --c-slate-500: 117 114 108; --c-slate-600: 87 84 79; --c-slate-700: 58 57 54; --c-slate-800: 42 42 40; --c-slate-900: 31 31 30; --c-slate-950: 22 22 21;
+  --c-indigo-50: 251 248 242; --c-indigo-100: 246 241 232; --c-indigo-200: 241 233 217; --c-indigo-300: 233 223 204; --c-indigo-400: 233 223 204; --c-indigo-500: 233 223 204; --c-indigo-600: 214 201 176; --c-indigo-700: 191 178 155; --c-indigo-800: 143 133 116; --c-indigo-900: 94 87 76; --c-indigo-950: 58 54 48;
+  --c-emerald-50: 236 253 245; --c-emerald-100: 209 250 229; --c-emerald-200: 167 243 208; --c-emerald-300: 139 215 174; --c-emerald-400: 91 199 154; --c-emerald-500: 63 169 124; --c-emerald-600: 47 138 99; --c-emerald-700: 37 110 80; --c-emerald-800: 29 86 64; --c-emerald-900: 21 64 47; --c-emerald-950: 11 42 31;
+  --c-amber-50: 255 251 235; --c-amber-100: 254 243 199; --c-amber-200: 253 230 138; --c-amber-300: 235 194 122; --c-amber-400: 226 168 75; --c-amber-500: 201 138 46; --c-amber-600: 168 110 30; --c-amber-700: 135 87 23; --c-amber-800: 106 68 19; --c-amber-900: 78 50 16; --c-amber-950: 46 29 8;
+  --c-rose-50: 255 241 242; --c-rose-100: 255 228 230; --c-rose-200: 251 207 198; --c-rose-300: 244 168 151; --c-rose-400: 240 138 117; --c-rose-500: 217 100 78; --c-rose-600: 184 75 55; --c-rose-700: 147 57 42; --c-rose-800: 112 41 31; --c-rose-900: 79 29 22; --c-rose-950: 46 16 12;
+  --c-violet-50: 245 243 255; --c-violet-100: 237 233 254; --c-violet-200: 221 214 254; --c-violet-300: 196 181 253; --c-violet-400: 167 139 250; --c-violet-500: 139 92 246; --c-violet-600: 124 58 237; --c-violet-700: 109 40 217; --c-violet-800: 91 33 182; --c-violet-900: 76 29 149; --c-violet-950: 46 16 101;
+  --c-white: 241 238 232; --c-on-accent: 22 22 21;
+}
+.pxl:not(.dark) {
+  --c-slate-50: 20 19 18; --c-slate-100: 28 27 25; --c-slate-200: 47 44 40; --c-slate-300: 74 70 63; --c-slate-400: 110 104 95; --c-slate-500: 140 133 122; --c-slate-600: 179 168 148; --c-slate-700: 217 207 190; --c-slate-800: 234 226 212; --c-slate-900: 255 255 255; --c-slate-950: 242 236 225;
+  --c-indigo-50: 14 13 12; --c-indigo-100: 20 19 18; --c-indigo-200: 28 27 25; --c-indigo-300: 42 40 38; --c-indigo-400: 58 56 54; --c-indigo-500: 42 40 38; --c-indigo-600: 28 27 25; --c-indigo-700: 20 19 18; --c-indigo-800: 184 174 156; --c-indigo-900: 221 213 198; --c-indigo-950: 239 233 222;
+  --c-emerald-50: 11 42 31; --c-emerald-100: 21 64 47; --c-emerald-200: 26 90 61; --c-emerald-300: 31 110 73; --c-emerald-400: 35 122 80; --c-emerald-500: 47 138 91; --c-emerald-600: 107 181 146; --c-emerald-700: 167 216 190; --c-emerald-800: 207 235 220; --c-emerald-900: 230 245 236; --c-emerald-950: 242 250 245;
+  --c-amber-50: 46 29 8; --c-amber-100: 78 50 16; --c-amber-200: 106 68 19; --c-amber-300: 126 82 16; --c-amber-400: 147 94 10; --c-amber-500: 184 110 0; --c-amber-600: 215 154 69; --c-amber-700: 235 200 141; --c-amber-800: 245 225 188; --c-amber-900: 251 240 220; --c-amber-950: 253 248 238;
+  --c-rose-50: 46 16 12; --c-rose-100: 79 29 22; --c-rose-200: 112 41 31; --c-rose-300: 142 52 35; --c-rose-400: 166 60 40; --c-rose-500: 194 65 45; --c-rose-600: 219 122 102; --c-rose-700: 237 179 166; --c-rose-800: 246 213 205; --c-rose-900: 251 234 230; --c-rose-950: 253 245 243;
+  --c-violet-50: 46 16 101; --c-violet-100: 76 29 149; --c-violet-200: 91 33 182; --c-violet-300: 109 40 217; --c-violet-400: 124 58 237; --c-violet-500: 139 92 246; --c-violet-600: 167 139 250; --c-violet-700: 196 181 253; --c-violet-800: 221 214 254; --c-violet-900: 237 233 254; --c-violet-950: 245 243 255;
+  --c-white: 28 27 25; --c-on-accent: 251 248 242;
+}

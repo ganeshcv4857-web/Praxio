@@ -16,13 +16,9 @@ const MOBILE = ['dashboard', 'results', 'development', 'market'];
 const LABEL = Object.fromEntries([...NAV, { id: 'career', label: 'Career pathway' }, { id: 'profile', label: 'My profile' }].map((n) => [n.id, n.label]));
 
 // App shell: floating pill nav (desktop), bottom pill nav (mobile).
-// The overview follows the Praxio theme; the other modules are still dark-designed, so
-// they render on the dark theme until they are rebuilt.
 export default function Shell({ activeTab, setActiveTab, profile, onSignOut, children }) {
   const [dark, flip] = usePraxioTheme();
   const [menu, setMenu] = useState(false);
-  const themed = activeTab === 'dashboard';
-  const isDark = themed ? dark : true;
   const go = (id) => { setActiveTab(id); setMenu(false); };
   const initials = (profile?.full_name ?? '').trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || 'you';
   const tabBtn = (n, compact) => {
@@ -36,13 +32,13 @@ export default function Shell({ activeTab, setActiveTab, profile, onSignOut, chi
   };
 
   return (
-    <div className={`pxl${isDark ? ' dark' : ''}`} style={{ minHeight: '100vh' }}>
+    <div className={`pxl${dark ? ' dark' : ''}`} style={{ minHeight: '100vh' }}>
       <div style={{ maxWidth: 1320, margin: '0 auto', padding: '16px clamp(16px, 3vw, 32px) 120px' }}>
         <nav aria-label="Praxio" style={{ position: 'sticky', top: 16, zIndex: 20, display: 'flex', alignItems: 'center', gap: 4, padding: '8px 8px 8px 24px', borderRadius: 999, background: 'var(--surface)', boxShadow: 'var(--shadow)' }}>
           <button type="button" onClick={() => go('dashboard')} aria-label="Overview" style={{ marginRight: 'auto', background: 'none', border: 0, padding: 0, color: 'var(--text)' }}><Logo height={36} /></button>
           <div className="hidden lg:flex" style={{ gap: 2 }}>{NAV.map((n) => tabBtn(n))}</div>
           <span className="lg:hidden" style={{ fontSize: 14, color: 'var(--text-2)', marginRight: 6 }}>{LABEL[activeTab]}</span>
-          {themed && (
+          {(
             <button type="button" onClick={flip} aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'} style={{ width: 44, height: 44, marginLeft: 6, borderRadius: '50%', border: 0, background: 'var(--surface-2)', color: 'var(--text)', display: 'grid', placeItems: 'center' }}>
               <svg width="16" height="16" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><circle cx="9" cy="9" r="6.5" /><path d="M9 2.5a6.5 6.5 0 0 1 0 13z" fill="currentColor" /></svg>
             </button>

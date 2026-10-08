@@ -49,7 +49,7 @@ function Likert({ value, onChange, low = 'Not at all', high = 'Very much', allow
             onClick={() => onChange(n)}
             aria-pressed={value === n}
             className={`h-9 flex-1 rounded-lg border text-sm font-semibold transition ${
-              value === n ? 'border-indigo-400 bg-indigo-500 text-white' : 'border-slate-700 text-slate-400 hover:bg-slate-800'
+              value === n ? 'border-indigo-400 bg-indigo-500 text-on-accent' : 'border-slate-700 text-slate-400 hover:bg-slate-800'
             }`}
           >
             {n}

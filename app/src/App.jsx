@@ -12,6 +12,7 @@ import ResetPassword from './components/ResetPassword.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import Onboarding from './components/Onboarding.jsx';
 import Shell from './components/Shell.jsx';
+import ThemeRoot from './components/ThemeRoot.jsx';
 import Results from './components/Results.jsx';
 import CareerDetail from './components/CareerDetail.jsx';
 import Advisor from './components/Advisor.jsx';
@@ -220,7 +221,7 @@ export default function App() {
   };
 
   // ---- Screens ------------------------------------------------------------
-  if (screen === 'loading') return <div className="grid min-h-screen place-items-center text-slate-400">Loading Praxio…</div>;
+  if (screen === 'loading') return <ThemeRoot><div className="grid min-h-screen place-items-center text-slate-400">Loading Praxio…</div></ThemeRoot>;
   if (screen === 'landing') {
     const signUp = () => (isConfigured ? (setAuthTab('signup'), setScreen('auth')) : loadUser(DEMO_USER_ID));
     const logIn = () => { setAuthTab('login'); setScreen('auth'); };
@@ -247,21 +248,23 @@ export default function App() {
     );
   }
   if (screen === 'reset_password') {
-    return <ResetPassword onDone={() => { setAuthNotice(''); loadUser(session.user.id); }} />;
+    return <ThemeRoot><ResetPassword onDone={() => { setAuthNotice(''); loadUser(session.user.id); }} /></ThemeRoot>;
   }
   if (screen === 'assessment') {
     // Resume an unfinished attempt; otherwise start from the saved profile (retake) or blank.
     // A stage picked in the opening pre-answers "Where are you now?" for a first attempt.
     const initial = assessment ? { ...profile, ...assessment.draft } : withEntryStage(profile);
     return (
+      <ThemeRoot>
       <Onboarding
-        initial={initial}
-        initialStep={assessment?.current_step ?? 0}
-        initialQuiz={assessment?.quiz_answers}
-        onProgress={saveAssessmentProgress}
-        onComplete={completeOnboarding}
-        onCancel={() => setScreen('app')}
-      />
+          initial={initial}
+          initialStep={assessment?.current_step ?? 0}
+          initialQuiz={assessment?.quiz_answers}
+          onProgress={saveAssessmentProgress}
+          onComplete={completeOnboarding}
+          onCancel={() => setScreen('app')}
+        />
+      </ThemeRoot>
     );
   }
 

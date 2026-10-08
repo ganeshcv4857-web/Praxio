@@ -125,7 +125,7 @@ export default function Advisor({ userId, context, focusDomain, clearFocus }) {
           )}
           {messages.map((m) =>
             m.role === 'user' ? (
-              <div key={m.id} className="ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-indigo-500 px-4 py-2 text-sm text-white">
+              <div key={m.id} className="ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-indigo-500 px-4 py-2 text-sm text-on-accent">
                 {m.content}
               </div>
             ) : (
