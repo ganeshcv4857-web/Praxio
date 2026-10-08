@@ -347,6 +347,8 @@ export default function App() {
       )}
       {!needsAssessment && activeTab === 'feasibility' && (
         <Feasibility
+          userId={userId}
+          profile={profile}
           row={feasibility}
           recs={recs}
           stage={userContext(profile).stage}

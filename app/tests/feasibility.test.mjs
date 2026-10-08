@@ -74,3 +74,42 @@ test('incomplete inputs produce no results; Module 1 order is kept', () => {
   const recs = [{ domainId: 'vlsi' }, { domainId: 'software-eng' }, { domainId: 'unknown' }];
   assert.deepEqual(evaluateAll(comfortable, recs).map((r) => r.domainId), ['vlsi', 'software-eng']);
 });
+
+// ------------------------------------------------------------ academic eligibility gate
+const ELIG_INPUTS = { income_band: '6to10', education_budget: '2to5', loan_willingness: 'no', risk_tolerance: 'moderate', education_preference: 'masters', relocation: 'india', family_priorities: [] };
+const route = (status, extra = {}) => ({ routeId: 'r', label: 'B.Tech', status, remedies: [], ...extra });
+
+test('eligibility gate: absent → no factor, score unchanged', () => {
+  const base = evaluateCareer('software-eng', ELIG_INPUTS);
+  assert.equal(base.factors.eligibility, undefined);
+  const open = evaluateCareer('software-eng', ELIG_INPUTS, { status: 'eligible', routes: [route('eligible')] });
+  assert.equal(open.factors.eligibility.status, 'good');
+  assert.equal(open.score, base.score);
+  assert.equal(open.category, base.category);
+});
+
+test('eligibility gate: closed caps the score below moderate and becomes the main issue', () => {
+  const r = evaluateCareer('software-eng', ELIG_INPUTS, { status: 'not_eligible', routes: [route('not_eligible')] });
+  assert.equal(r.factors.eligibility.status, 'bad');
+  assert.equal(r.category, 'barrier');
+  assert.ok(r.score < CATEGORIES.find((c) => c.id === 'moderate').min);
+  assert.equal(r.weakest, 'eligibility');
+  assert.match(r.consideration, /closed academically/);
+  assert.equal(r.scoreBeforeEligibility, evaluateCareer('software-eng', ELIG_INPUTS).score);
+});
+
+test('eligibility gate: unclear never lowers the score (unknown is not closed)', () => {
+  const base = evaluateCareer('software-eng', ELIG_INPUTS);
+  const r = evaluateCareer('software-eng', ELIG_INPUTS, { status: 'unknown', routes: [route('unknown', { remedies: [{ type: 'add_record', qualification: 'class_12' }] })] });
+  assert.equal(r.factors.eligibility.status, 'warn');
+  assert.match(r.factors.eligibility.message, /Class 12 marks/);
+  assert.equal(r.score, base.score);
+  assert.equal(r.category, base.category);
+});
+
+test('evaluateAll passes eligibility per career', () => {
+  const recs = [{ domainId: 'software-eng' }, { domainId: 'data-science' }];
+  const out = evaluateAll(ELIG_INPUTS, recs, { 'software-eng': { status: 'not_eligible', routes: [route('not_eligible')] } });
+  assert.equal(out[0].category, 'barrier');
+  assert.equal(out[1].factors.eligibility, undefined);
+});

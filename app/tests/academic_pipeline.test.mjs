@@ -137,7 +137,12 @@ test('CASE 10: academic + Career Fit + Feasibility + Market + skills coexist wit
   const withAcademic = journey({ profile, records: [class12()], marketById: { 'software-eng': market }, progress });
   const without = journey({ profile, records: undefined, marketById: { 'software-eng': market }, progress });
   assert.equal(career(withAcademic.bundle).status, 'eligible');
-  assert.deepEqual(withAcademic.bundle.careers, without.bundle.careers, 'fit, feasibility, alignment, market, skill gap identical');
+  // Eligibility is a feasibility gate: an open result adds the factor and changes nothing else.
+  const stripGate = (cs) => cs.map((c) => (c.feasibility?.factors?.eligibility
+    ? { ...c, feasibility: { ...c.feasibility, factors: Object.fromEntries(Object.entries(c.feasibility.factors).filter(([k]) => k !== 'eligibility')) } }
+    : c));
+  assert.equal(withAcademic.bundle.careers.find((c) => c.careerId === 'software-eng').feasibility.factors.eligibility.status, 'good');
+  assert.deepEqual(stripGate(withAcademic.bundle.careers), stripGate(without.bundle.careers), 'fit, feasibility score, alignment, market, skill gap identical');
   assert.deepEqual(withAcademic.bundle.skills, without.bundle.skills);
   const ev = withAcademic.decision.evidence;
   assert.equal(ev.careerFit, 91);

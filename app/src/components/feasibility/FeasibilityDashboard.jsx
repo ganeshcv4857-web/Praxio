@@ -5,7 +5,7 @@ import {
   BUDGET_BANDS, EDUCATION_OPTIONS, FAMILY_PRIORITIES, INCOME_BANDS, LOAN_OPTIONS, RELOCATION_OPTIONS,
   RISK_LEVELS, WEIGHTS, byId,
 } from '../../lib/feasibility/config.js';
-import { FACTORS } from '../../lib/feasibility/scoring.js';
+import { ELIGIBILITY_FACTOR, FACTORS, factorsFor } from '../../lib/feasibility/scoring.js';
 import FinancingPlan from './FinancingPlan.jsx';
 import { Btn, Fact, Meter, More, PageHead, Row, Rows, Status, Summary } from '../ui/kit.jsx';
 
@@ -19,7 +19,7 @@ const CAT = {
 };
 const FACTOR_TONE = { good: 'good', warn: 'warn', bad: 'bad' };
 const FACTOR_WORD = { good: 'Clear', warn: 'Partial', bad: 'Barrier' };
-const factorLabel = (id) => FACTORS.find((f) => f.id === id)?.label;
+const factorLabel = (id) => [ELIGIBILITY_FACTOR, ...FACTORS].find((f) => f.id === id)?.label;
 
 function CareerRow({ rec, result, career, cost, onOpenCareer, open, onToggle }) {
   const cat = CAT[result.category];
@@ -39,7 +39,7 @@ function CareerRow({ rec, result, career, cost, onOpenCareer, open, onToggle }) 
       </div>
 
       <ul className="mt-6 divide-y divide-slate-800 rounded-2xl bg-slate-950/40">
-        {FACTORS.map(({ id, label }) => {
+        {factorsFor(result).map(({ id, label }) => {
           const f = result.factors[id];
           return (
             <li key={id} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-4 py-3">
@@ -47,7 +47,7 @@ function CareerRow({ rec, result, career, cost, onOpenCareer, open, onToggle }) 
                 <div className="text-[15px] font-medium">{label}</div>
                 <div className="text-sm text-slate-400">{f.message}</div>
               </div>
-              <Status tone={FACTOR_TONE[f.status]}>{FACTOR_WORD[f.status]}</Status>
+              <Status tone={FACTOR_TONE[f.status]}>{f.word ?? FACTOR_WORD[f.status]}</Status>
             </li>
           );
         })}
@@ -134,6 +134,8 @@ export default function FeasibilityDashboard({ inputs, results, recs, onEdit, on
           Career fit is how well a career matches your interests and abilities. Feasibility is how achievable it is given
           your family's practical situation, weighted: financial {WEIGHTS.financial * 100}%, education {WEIGHTS.education * 100}%,
           risk {WEIGHTS.risk * 100}%, family priorities {WEIGHTS.family * 100}%, location {WEIGHTS.location * 100}%.
+          Academic eligibility works as a gate on top: if your marks close every entry route for a career, it counts as a
+          barrier whatever the other factors say. If eligibility is only unclear (marks missing or incomplete), the score isn’t lowered.
           Costs, durations and risk levels are approximate estimates for India, not financial advice.
         </More>
       </div>

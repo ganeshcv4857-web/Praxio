@@ -2,6 +2,7 @@
 // + config always give the same result, so stored inputs fully reproduce stored scores.
 //
 //   feasibility = Σ weight_f × score_f        f ∈ financial, education, risk, location, family
+//   …then gated by academic eligibility when supplied (closed → capped below moderate)
 //
 // Each factor is scored 0–100 and carries a status (good / warn / bad) and a message
 // built only from the inputs and dataset values. No LLM is involved.
@@ -21,6 +22,44 @@ export const FACTORS = [
   { id: 'location', label: 'Location' },
   { id: 'family', label: 'Family priorities' },
 ];
+
+// Academic eligibility is a gate, not a weighted factor: it's added only when the caller
+// supplies an eligibility result (lib/academic/eligibility.js) for the career. A closed
+// result caps the score below "moderate"; unclear never lowers the score (unknown ≠ closed).
+export const ELIGIBILITY_FACTOR = { id: 'eligibility', label: 'Academic eligibility' };
+/** The factors to show for a result: eligibility first when it was evaluated. */
+export const factorsFor = (result) => (result?.factors?.eligibility ? [ELIGIBILITY_FACTOR, ...FACTORS] : FACTORS);
+
+const QUAL_NAME = { class_10: 'Class 10', class_12: 'Class 12' };
+const join = (xs) => [...new Set(xs)].join(', ');
+
+export function eligibilityFactor(e) {
+  const routes = e.routes ?? [];
+  const remedies = routes.flatMap((r) => r.remedies ?? []);
+  const viable = routes.filter((r) => r.status === 'eligible' || r.status === 'open').map((r) => r.label);
+  switch (e.status) {
+    case 'eligible':
+      return { score: 100, status: 'good', word: 'Open', message: `You meet the entry requirements for ${join(viable)}.` };
+    case 'open':
+      return { score: 100, status: 'good', word: 'Open', message: `Your planned stream keeps ${join(viable)} open.` };
+    case 'not_eligible':
+      return { score: 0, status: 'bad', word: 'Closed', message: `Your academic record doesn’t meet the entry requirements for ${join(routes.map((r) => r.label))}.` };
+    case 'needs_subject': {
+      const subj = remedies.filter((m) => m.type === 'take_subject').map((m) => m.label ?? m.subject);
+      return { score: null, status: 'warn', word: 'Needs a subject', message: subj.length ? `Needs ${join(subj)} in Class 11–12 to keep a route open.` : 'Needs a specific subject in Class 11–12.' };
+    }
+    case 'no_catalogued_route':
+      return { score: null, status: 'warn', word: 'Unclear', message: 'Entry routes for this career aren’t catalogued yet, so eligibility is unknown.' };
+    default: {
+      const add = remedies.filter((m) => m.type === 'add_record').map((m) => QUAL_NAME[m.qualification] ?? 'academic');
+      const fix = remedies.filter((m) => ['complete_record', 'fix_record', 'confirm_subject_list', 'clarify_subject'].includes(m.type)).map((m) => QUAL_NAME[m.qualification] ?? 'academic');
+      const message = add.length ? `Unclear until you add your ${join(add)} marks.`
+        : fix.length ? `Unclear until your ${join(fix)} record is complete.`
+          : 'Unclear: entry rules are set by each institution, so check theirs.';
+      return { score: null, status: 'warn', word: 'Unclear', message };
+    }
+  }
+}
 
 // Per extra level of study the student isn't planning, by how much the field expects it.
 const EDUCATION_GAP_PENALTY = { low: 15, medium: 25, high: 40 };
@@ -158,8 +197,11 @@ const CONSIDERATION = {
   family: (_cost, _cap, f) => `family priorities: this career is less typically associated with ${listLabels(f.unmet)}.`,
 };
 
-/** Evaluate one career. Returns null for careers without dataset entries. */
-export function evaluateCareer(domainId, inputs) {
+/**
+ * Evaluate one career. Returns null for careers without dataset entries.
+ * `eligibility` (optional): this career's academic eligibility result; adds the gate factor.
+ */
+export function evaluateCareer(domainId, inputs, eligibility = null) {
   const cost = CAREER_COSTS[domainId];
   if (!cost) return null;
   const cap = studentCapacity(inputs);
@@ -178,26 +220,38 @@ export function evaluateCareer(domainId, inputs) {
   const factors = Object.fromEntries(
     FACTORS.map(({ id }) => [id, { ...raw[id], status: statusOf(raw[id].score), weight: WEIGHTS[id] }])
   );
-  const score = clamp(FACTORS.reduce((s, { id }) => s + WEIGHTS[id] * factors[id].score, 0));
+  const weighted = clamp(FACTORS.reduce((s, { id }) => s + WEIGHTS[id] * factors[id].score, 0));
+  const elig = eligibility ? { ...eligibilityFactor(eligibility), weight: 0, gate: true } : null;
+  if (elig) factors.eligibility = elig;
+  const closed = elig?.status === 'bad';
+  const moderateMin = CATEGORIES.find((c) => c.id === 'moderate').min;
+  const score = closed ? Math.min(weighted, moderateMin - 1) : weighted;
   const category = CATEGORIES.find((c) => score >= c.min);
 
-  // Key consideration: the factor costing the most weighted points.
-  const weakest = [...FACTORS].sort(
+  // Key consideration: a closed eligibility gate first, else the factor costing the most
+  // weighted points, else an unclear eligibility.
+  const byCost = [...FACTORS].sort(
     (a, b) => WEIGHTS[b.id] * (100 - factors[b.id].score) - WEIGHTS[a.id] * (100 - factors[a.id].score)
   )[0].id;
+  const weakest = closed || (elig && factors[byCost].status === 'good' && elig.status !== 'good') ? 'eligibility' : byCost;
   const hasIssue = factors[weakest].status !== 'good';
   const lead = category.id === 'high'
     ? 'Your career interest and family constraints are largely aligned.'
     : category.id === 'moderate'
       ? 'This path is achievable, with some practical trade-offs.'
       : 'This path faces significant practical barriers right now.';
-  const consideration = hasIssue
-    ? `${lead} The main consideration is ${CONSIDERATION[weakest](cost, cap, factors[weakest])}`
-    : `${lead} Nothing you told us stands in the way.`;
+  const consideration = closed
+    ? `This path is closed academically right now. ${elig.message} Other careers on your list may still be open.`
+    : weakest === 'eligibility' && hasIssue
+      ? `${lead} The open question is academic eligibility: ${elig.message.charAt(0).toLowerCase()}${elig.message.slice(1)}`
+      : hasIssue
+        ? `${lead} The main consideration is ${CONSIDERATION[weakest](cost, cap, factors[weakest])}`
+        : `${lead} Nothing you told us stands in the way.`;
 
   return {
     domainId,
     score,
+    ...(closed ? { scoreBeforeEligibility: weighted } : {}),
     category: category.id,
     factors,
     weakest: hasIssue ? weakest : null,
@@ -207,9 +261,9 @@ export function evaluateCareer(domainId, inputs) {
 }
 
 /** Evaluate every recommended career (Module 1 shortlist), keeping Module 1's order. */
-export function evaluateAll(inputs, recs) {
+export function evaluateAll(inputs, recs, eligibilityById = null) {
   if (!isComplete(inputs)) return [];
-  return recs.map((r) => evaluateCareer(r.domainId, inputs)).filter(Boolean);
+  return recs.map((r) => evaluateCareer(r.domainId, inputs, eligibilityById?.[r.domainId] ?? null)).filter(Boolean);
 }
 
 export const categoryOf = (id) => CATEGORIES.find((c) => c.id === id);

@@ -75,12 +75,13 @@ export function buildDecisionInputs({ profile, recs, inputs, marketById = {}, pr
   const context = userContext(profile);
   const prog = progress ?? (dev ? deriveProgress(dev) : null);
   const m2 = isComplete(inputs);
-  const feasibility = m2 ? Object.fromEntries(evaluateAll(inputs, recs).map((r) => [r.domainId, r])) : {};
+  const academic = academicModule({ context, profile, recs, academicRecords });
+  const eligibilityById = academic.status === 'evaluated' ? Object.fromEntries(academic.careers.map((a) => [a.careerId, a])) : null;
+  const feasibility = m2 ? Object.fromEntries(evaluateAll(inputs, recs, eligibilityById).map((r) => [r.domainId, r])) : {};
   const alignment = m2 ? Object.fromEntries(alignShortlist({ recs, profile, inputs, marketById }).map((a) => [a.careerId, a])) : {};
   const demonstrated = prog?.demonstratedSkills ?? [];
   const learned = prog?.learnedSkills ?? [];
   const evaluations = prog?.evaluations ?? dev?.evaluations ?? [];
-  const academic = academicModule({ context, profile, recs, academicRecords });
 
   return {
     context: { stage: context.stage, stageLabel: context.stageLabel, group: context.group, activity: context.activity, goal: context.goal, stream: context.stream, role: context.role, isLegacy: context.isLegacy },

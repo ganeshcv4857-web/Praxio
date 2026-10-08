@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import * as db from '../lib/db.js';
 import { CAREER_BY_ID } from '../lib/careers.js';
-import { evaluateAll, isComplete, FACTORS } from '../lib/feasibility/scoring.js';
+import { evaluateAll, isComplete, factorsFor } from '../lib/feasibility/scoring.js';
 import { pickInputs } from './feasibility/FeasibilityWizard.jsx';
 import { rankPathways } from '../lib/development/pathways.js';
 import { deriveProgress, pathwayStages } from '../lib/development/learning.js';
@@ -72,7 +72,8 @@ export default function Dashboard({ userId, profile, recs, feasibilityRow, asses
   }, [m1Done, userId, profile, recs, inputs]);
   const decision = useMemo(() => (bundle ? decide(bundle) : null), [bundle]);
 
-  const feas = useMemo(() => (m2Done ? Object.fromEntries(evaluateAll(inputs, recs).map((r) => [r.domainId, r])) : {}), [m2Done, inputs, recs]);
+  const eligibilityById = useMemo(() => (bundle?.academic?.status === 'evaluated' ? Object.fromEntries(bundle.academic.careers.map((a) => [a.careerId, a])) : null), [bundle]);
+  const feas = useMemo(() => (m2Done ? Object.fromEntries(evaluateAll(inputs, recs, eligibilityById).map((r) => [r.domainId, r])) : {}), [m2Done, inputs, recs, eligibilityById]);
   const progress = useMemo(() => deriveProgress(dev), [dev]);
   const chosen = useMemo(() => {
     if (!m2Done || !dev) return null;
@@ -138,7 +139,7 @@ export default function Dashboard({ userId, profile, recs, feasibilityRow, asses
         ? { step: 1, title: 'Self-reported', body: 'Your record is in; it hasn’t been validated yet.', icon: 'self' }
         : { step: 2, title: 'Validated', body: 'Your academic record passed validation.', icon: 'ok' };
   const f = cur ? feas[cur.domainId] : null;
-  const dims = f ? FACTORS.map(({ id, label: l }) => ({ id, label: l, status: f.factors[id].status, message: f.factors[id].message })) : [];
+  const dims = f ? factorsFor(f).map(({ id, label: l }) => ({ id, label: l, status: f.factors[id].status, word: f.factors[id].word, message: f.factors[id].message })) : [];
   const dim = dims.find((x) => x.id === dimSel) ?? dims.find((x) => x.status !== 'good') ?? dims[0];
   const mk = bundle?.careers?.find((c) => c.careerId === cur?.domainId);
   const gap = mk?.skillGap?.items?.filter((s) => s.status === 'missing') ?? [];
@@ -285,11 +286,11 @@ export default function Dashboard({ userId, profile, recs, feasibilityRow, asses
             </>
           ) : (
             <>
-              <p style={{ margin: '16px 0 0', color: 'var(--text-2)', lineHeight: 1.5 }}>Five dimensions, never one score. Tap one.</p>
+              <p style={{ margin: '16px 0 0', color: 'var(--text-2)', lineHeight: 1.5 }}>{dims.length === 6 ? 'Eligibility first, then five dimensions. Tap one.' : 'Five dimensions, never one score. Tap one.'}</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 14 }}>
                 {dims.map((x) => (
                   <button key={x.id} type="button" onClick={() => setDimSel(x.id)} aria-expanded={dim?.id === x.id} style={{ textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, minHeight: 48, padding: '0 16px', borderRadius: 16, border: 0, background: dim?.id === x.id ? 'var(--surface-2)' : 'transparent', color: 'var(--text)', fontSize: 16 }}>
-                    <span>{x.label}</span><span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: FACTOR_TONE[x.status][0] }}><Dot color={FACTOR_TONE[x.status][0]} />{FACTOR_TONE[x.status][1]}</span>
+                    <span>{x.label}</span><span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: FACTOR_TONE[x.status][0] }}><Dot color={FACTOR_TONE[x.status][0]} />{x.word ?? FACTOR_TONE[x.status][1]}</span>
                   </button>
                 ))}
               </div>
