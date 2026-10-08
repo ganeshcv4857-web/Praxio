@@ -356,13 +356,31 @@ export async function groq(fetchImpl, apiKey, body, timeoutMs) {
  * Throws MarketResearchError('invalid_output') if the reply isn't valid JSON.
  */
 export async function groqJson({ apiKey, system, user, name, schema, model = MARKET_CONFIG.model, temperature = 0.3, maxTokens = 4096, timeoutMs = 60_000, fetchImpl = fetch }) {
-  const msg = await groq(fetchImpl, apiKey, {
-    model,
-    messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
-    response_format: { type: 'json_schema', json_schema: { name, strict: true, schema } },
-    temperature,
-    max_completion_tokens: maxTokens,
-  }, timeoutMs);
+  let msg;
+  try {
+    msg = await groq(fetchImpl, apiKey, {
+      model,
+      messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+      response_format: { type: 'json_schema', json_schema: { name, strict: true, schema } },
+      temperature,
+      max_completion_tokens: maxTokens,
+    }, timeoutMs);
+  } catch (e) {
+    // Strict mode rejects the whole reply when the model drifts from the schema even slightly
+    // ("HTTP 400: Parsing failed … failed_generation"). Retry once in JSON mode with the schema
+    // spelled out; every caller still validates the result before using it.
+    if (!(e instanceof MarketResearchError) || !/HTTP 400.*(pars|json|schema|generat|validat)/i.test(`${e.detail ?? ''} ${e.message}`)) throw e;
+    msg = await groq(fetchImpl, apiKey, {
+      model,
+      messages: [
+        { role: 'system', content: `${system}\n\nReply with ONE JSON object only (no prose, no code fences) that matches this JSON Schema exactly, including every required field:\n${JSON.stringify(schema)}` },
+        { role: 'user', content: user },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: Math.min(temperature, 0.2),
+      max_completion_tokens: Math.max(maxTokens, 6144),
+    }, timeoutMs);
+  }
   try {
     return { data: JSON.parse(msg.content ?? ''), model };
   } catch {
